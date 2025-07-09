@@ -21,6 +21,7 @@ import {
   Add,
   FormatListBulleted,
   Code,
+  Games,
 } from '@mui/icons-material'
 
 const drawerWidth = 240
@@ -39,6 +40,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'Home', icon: <Home />, path: '/' },
   { text: 'Counter Demo', icon: <Add />, path: '/counter' },
   { text: 'Todo List Demo', icon: <FormatListBulleted />, path: '/todos' },
+  { text: 'Tower Defense', icon: <Games />, path: '/tower-defense' },
 ]
 
 export const Layout = ({ children }: LayoutProps) => {
