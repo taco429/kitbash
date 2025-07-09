@@ -1,8 +1,10 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
-import { CssBaseline, Container, Box } from '@mui/material'
-import { Header } from './components/Header'
-import { Counter } from './components/Counter'
-import { TodoList } from './components/TodoList'
+import { CssBaseline } from '@mui/material'
+import { Layout } from './components/layout/Layout'
+import { HomePage } from './pages/HomePage'
+import { CounterPage } from './pages/CounterPage'
+import { TodoPage } from './pages/TodoPage'
 
 const theme = createTheme({
   palette: {
@@ -20,15 +22,15 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Header />
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Counter />
-          <Box sx={{ mt: 4 }}>
-            <TodoList />
-          </Box>
-        </Box>
-      </Container>
+      <Router>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/counter" element={<CounterPage />} />
+            <Route path="/todos" element={<TodoPage />} />
+          </Routes>
+        </Layout>
+      </Router>
     </ThemeProvider>
   )
 }
