@@ -71,6 +71,8 @@ export const HomePage = () => {
                 <Chip label="Material-UI" color="secondary" sx={{ mr: 1, mb: 1 }} />
                 <Chip label="Redux Toolkit" color="success" sx={{ mr: 1, mb: 1 }} />
                 <Chip label="React Router" color="success" sx={{ mr: 1, mb: 1 }} />
+                <Chip label="Canvas API" color="warning" sx={{ mr: 1, mb: 1 }} />
+                <Chip label="Game Loop" color="warning" sx={{ mr: 1, mb: 1 }} />
               </Box>
 
               <List>
@@ -117,6 +119,15 @@ export const HomePage = () => {
                   <ListItemText 
                     primary="Todo List Demo"
                     secondary="CRUD operations with Redux"
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <CheckCircle color="success" />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Tower Defense Game"
+                    secondary="Interactive game with Canvas rendering"
                   />
                 </ListItem>
               </List>

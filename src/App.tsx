@@ -5,6 +5,7 @@ import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
 import { CounterPage } from './pages/CounterPage'
 import { TodoPage } from './pages/TodoPage'
+import { TowerDefensePage } from './pages/TowerDefensePage'
 
 const theme = createTheme({
   palette: {
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/counter" element={<CounterPage />} />
             <Route path="/todos" element={<TodoPage />} />
+            <Route path="/tower-defense" element={<TowerDefensePage />} />
           </Routes>
         </Layout>
       </Router>
