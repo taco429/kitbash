@@ -2,12 +2,15 @@
   "name": "kitbash",
   "version": "1.0.0",
   "description": "Place to slap things together",
+  "homepage": "https://taco429.github.io/kitbash",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "repository": {
     "type": "git",
@@ -19,7 +22,6 @@
   "bugs": {
     "url": "https://github.com/taco429/kitbash/issues"
   },
-  "homepage": "https://github.com/taco429/kitbash#readme",
   "dependencies": {
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
@@ -36,6 +38,7 @@
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "gh-pages": "^6.2.0",
     "typescript": "~5.6.3",
     "vite": "^6.0.3"
   }
