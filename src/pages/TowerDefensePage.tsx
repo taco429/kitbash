@@ -11,8 +11,7 @@ import {
   CardContent,
   LinearProgress,
   Chip,
-  IconButton,
-  Tooltip
+  IconButton
 } from '@mui/material'
 import {
   PlayArrow,
@@ -39,7 +38,6 @@ import {
   GAME_CONFIG, 
   GAME_PATH, 
   TOWER_TYPES, 
-  Position,
   Tower,
   Enemy,
   Projectile 
@@ -171,7 +169,6 @@ export const TowerDefensePage = () => {
 
     // Draw placement preview
     if (gameState.selectedTowerType) {
-      const rect = canvas.getBoundingClientRect()
       // This would need mouse position tracking to work properly
       // For now, we'll just show the selected tower type
     }

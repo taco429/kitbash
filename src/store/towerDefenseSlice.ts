@@ -56,7 +56,7 @@ export const towerDefenseSlice = createSlice({
       state.isPaused = !state.isPaused
     },
     
-    resetGame: (state) => {
+    resetGame: () => {
       return { ...initialState }
     },
     
@@ -167,23 +167,23 @@ export const towerDefenseSlice = createSlice({
       state.towers.forEach(tower => {
         if (currentTime - tower.lastFired >= tower.fireRate) {
           // Find closest enemy in range
-          let closestEnemy: Enemy | null = null
+          let targetPosition: Position | null = null
           let closestDistance = Infinity
           
           state.enemies.forEach(enemy => {
             const dist = distance(tower.position, enemy.position)
             if (dist <= tower.range && dist < closestDistance) {
-              closestEnemy = enemy
+              targetPosition = { x: enemy.position.x, y: enemy.position.y }
               closestDistance = dist
             }
           })
           
-          if (closestEnemy) {
+          if (targetPosition) {
             // Create projectile
             const projectile: Projectile = {
               id: generateProjectileId(),
               position: { ...tower.position },
-              target: { ...closestEnemy.position },
+              target: targetPosition,
               damage: tower.damage,
               speed: GAME_CONFIG.PROJECTILE_SPEED
             }
