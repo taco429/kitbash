@@ -9,6 +9,8 @@ interface WordSearchState {
   isSelecting: boolean
   gameSize: number
   difficulty: 'easy' | 'medium' | 'hard'
+  selectionStart: { row: number; col: number } | null
+  selectionEnd: { row: number; col: number } | null
 }
 
 const WORD_LISTS = {
@@ -25,7 +27,9 @@ const initialState: WordSearchState = {
   gameWon: false,
   isSelecting: false,
   gameSize: 10,
-  difficulty: 'easy'
+  difficulty: 'easy',
+  selectionStart: null,
+  selectionEnd: null
 }
 
 // Helper function to generate a random letter
@@ -117,15 +121,20 @@ export const wordSearchSlice = createSlice({
       state.selectedCells = []
       state.gameWon = false
       state.isSelecting = false
+      state.selectionStart = null
+      state.selectionEnd = null
     },
     startSelection: (state: WordSearchState, action: PayloadAction<{ row: number; col: number }>) => {
       state.selectedCells = [action.payload]
       state.isSelecting = true
+      state.selectionStart = action.payload
+      state.selectionEnd = action.payload
     },
     updateSelection: (state: WordSearchState, action: PayloadAction<{ row: number; col: number }>) => {
-      if (state.isSelecting && state.selectedCells.length > 0) {
-        const start = state.selectedCells[0]
+      if (state.isSelecting && state.selectionStart) {
+        const start = state.selectionStart
         const end = action.payload
+        state.selectionEnd = end
         
         // Calculate the path between start and end
         const path: Array<{ row: number; col: number }> = []
@@ -172,10 +181,14 @@ export const wordSearchSlice = createSlice({
       
       state.selectedCells = []
       state.isSelecting = false
+      state.selectionStart = null
+      state.selectionEnd = null
     },
     clearSelection: (state: WordSearchState) => {
       state.selectedCells = []
       state.isSelecting = false
+      state.selectionStart = null
+      state.selectionEnd = null
     }
   },
 })
