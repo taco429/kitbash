@@ -130,6 +130,15 @@ export const HomePage = () => {
                     secondary="Interactive game with Canvas rendering"
                   />
                 </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <CheckCircle color="success" />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Word Search Game"
+                    secondary="Interactive word search puzzle game"
+                  />
+                </ListItem>
               </List>
             </CardContent>
           </Card>
