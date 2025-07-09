@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage'
 import { CounterPage } from './pages/CounterPage'
 import { TodoPage } from './pages/TodoPage'
 import { TowerDefensePage } from './pages/TowerDefensePage'
+import { WordSearchPage } from './pages/WordSearchPage'
 
 const theme = createTheme({
   palette: {
@@ -30,6 +31,7 @@ function App() {
             <Route path="/counter" element={<CounterPage />} />
             <Route path="/todos" element={<TodoPage />} />
             <Route path="/tower-defense" element={<TowerDefensePage />} />
+            <Route path="/word-search" element={<WordSearchPage />} />
           </Routes>
         </Layout>
       </Router>
