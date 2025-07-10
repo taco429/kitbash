@@ -17,23 +17,57 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Fab
 } from '@mui/material'
-import { Refresh, EmojiEvents, Search } from '@mui/icons-material'
+import { 
+  Refresh, 
+  EmojiEvents, 
+  Search, 
+  Close as CloseIcon,
+  List as ListIcon,
+  ArrowBack
+} from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { grid, words, foundWords, foundWordPositions, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
+  const [wordBankOpen, setWordBankOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Start a new game when component mounts
     dispatch(newGame({ difficulty: 'easy' }))
   }, [dispatch])
+
+  // Prevent body scrolling on mobile word search
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.height = '100vh'
+      document.body.style.touchAction = 'none'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.height = ''
+        document.body.style.touchAction = ''
+      }
+    }
+  }, [isMobile])
 
   // Global event handlers to end selection when drag ends outside grid
   useEffect(() => {
@@ -62,6 +96,10 @@ export const WordSearchPage = () => {
 
   const handleNewGame = () => {
     dispatch(newGame({ difficulty }))
+  }
+
+  const handleBack = () => {
+    navigate('/')
   }
 
   // Simplified function to get cell from coordinates
@@ -198,9 +236,12 @@ export const WordSearchPage = () => {
     const isDraggingStart = isDragging && isStartCell
     const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
     
+    const cellSize = isMobile ? '8vw' : '40px'
+    const fontSize = isMobile ? '4vw' : '16px'
+    
     const baseStyle = {
-      width: '40px',
-      height: '40px',
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -208,13 +249,13 @@ export const WordSearchPage = () => {
       borderRadius: '8px',
       cursor: 'pointer',
       userSelect: 'none' as const,
-      fontSize: '16px',
+      fontSize: fontSize,
       fontWeight: 'bold',
       transition: 'all 0.1s ease',
       touchAction: 'none',
       position: 'relative' as const,
       zIndex: 1,
-      margin: '2px',
+      margin: isMobile ? '1px' : '2px',
       boxSizing: 'border-box' as const
     }
 
@@ -293,10 +334,10 @@ export const WordSearchPage = () => {
   const renderFoundWordLines = () => {
     if (!gridRef.current || foundWordPositions.length === 0) return null
     
-    const cellSize = 40
-    const cellMargin = 4
+    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
+    const cellMargin = isMobile ? 2 : 4
     const cellWithMargin = cellSize + cellMargin
-    const gridPadding = 16
+    const gridPadding = isMobile ? 8 : 16
     const borderWidth = 2
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
     const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
@@ -359,10 +400,10 @@ export const WordSearchPage = () => {
   const renderSelectionLine = () => {
     if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
     
-    const cellSize = 40
-    const cellMargin = 4
+    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
+    const cellMargin = isMobile ? 2 : 4
     const cellWithMargin = cellSize + cellMargin
-    const gridPadding = 16
+    const gridPadding = isMobile ? 8 : 16
     const borderWidth = 2
     
     // Use the same coordinate calculation as found word lines for consistency
@@ -429,6 +470,192 @@ export const WordSearchPage = () => {
     }
   }
 
+  // Mobile full-screen layout
+  if (isMobile) {
+    return (
+      <Box sx={{ 
+        height: '100vh', 
+        width: '100vw', 
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#f5f5f5'
+      }}>
+        {/* Mobile Header */}
+        <AppBar position="fixed" sx={{ zIndex: 1100 }}>
+          <Toolbar variant="dense">
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleBack}
+            >
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
+              Word Search
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 80, mr: 1 }}>
+              <Select
+                value={difficulty}
+                onChange={handleDifficultyChange}
+                variant="outlined"
+                sx={{ 
+                  color: 'white',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+                  '& .MuiSvgIcon-root': { color: 'white' }
+                }}
+              >
+                <MenuItem value="easy">Easy</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="hard">Hard</MenuItem>
+              </Select>
+            </FormControl>
+            <IconButton color="inherit" onClick={handleNewGame}>
+              <Refresh />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+
+        {/* Game Grid Container */}
+        <Box sx={{ 
+          pt: '48px', // Account for header height
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden'
+        }}>
+          <Box 
+            ref={gridRef}
+            sx={{ 
+              display: 'inline-block', 
+              p: 1, 
+              border: '2px solid #ccc',
+              borderRadius: 1,
+              backgroundColor: '#f9f9f9',
+              touchAction: 'none',
+              position: 'relative',
+              overflow: 'visible'
+            }}
+            onMouseMove={handleMouseMove}
+            onTouchMove={handleTouchMove}
+          >
+            {grid.map((row: string[], rowIndex: number) => (
+              <Box key={rowIndex} sx={{ display: 'flex' }}>
+                {row.map((cell: string, colIndex: number) => (
+                  <Box
+                    key={`${rowIndex}-${colIndex}`}
+                    data-cell={`${rowIndex}-${colIndex}`}
+                    sx={getCellStyle(rowIndex, colIndex)}
+                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                    onMouseUp={handleMouseUp}
+                    onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={() => handleCellClick(rowIndex, colIndex)}
+                  >
+                    {cell}
+                  </Box>
+                ))}
+              </Box>
+            ))}
+            {renderFoundWordLines()}
+            {renderSelectionLine()}
+          </Box>
+        </Box>
+
+        {/* Word Bank Floating Action Button */}
+        <Fab
+          color="primary"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000
+          }}
+          onClick={() => setWordBankOpen(true)}
+        >
+          <ListIcon />
+        </Fab>
+
+        {/* Word Bank Drawer */}
+        <Drawer
+          anchor="right"
+          open={wordBankOpen}
+          onClose={() => setWordBankOpen(false)}
+          sx={{
+            zIndex: 1200,
+            '& .MuiDrawer-paper': {
+              width: '280px',
+              maxWidth: '80vw'
+            }
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6">
+                Find These Words
+              </Typography>
+              <IconButton onClick={() => setWordBankOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Progress: {foundWords.length} / {words.length} words found
+            </Typography>
+
+            {gameWon && (
+              <Chip 
+                icon={<EmojiEvents />} 
+                label="All words found!" 
+                color="success" 
+                size="medium"
+                sx={{ mb: 2, width: '100%' }}
+              />
+            )}
+
+            <List dense>
+              {words.map((word: string, index: number) => (
+                <ListItem key={index} disablePadding>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      width: '100%', 
+                      p: 1, 
+                      mb: 1,
+                      backgroundColor: foundWords.includes(word) ? '#e8f5e8' : 'white'
+                    }}
+                  >
+                    <ListItemText 
+                      primary={word}
+                      primaryTypographyProps={{ style: getWordItemStyle(word) }}
+                    />
+                  </Paper>
+                </ListItem>
+              ))}
+            </List>
+
+            {gameWon && (
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                onClick={() => {
+                  handleNewGame()
+                  setWordBankOpen(false)
+                }}
+                startIcon={<Refresh />}
+                sx={{ mt: 2 }}
+              >
+                Play Again
+              </Button>
+            )}
+          </Box>
+        </Drawer>
+      </Box>
+    )
+  }
+
+  // Desktop layout (unchanged)
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
       <Typography variant="h3" component="h1" gutterBottom>
@@ -509,13 +736,13 @@ export const WordSearchPage = () => {
                         onClick={() => handleCellClick(rowIndex, colIndex)}
                       >
                         {cell}
-                                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
                 ))}
+                {renderFoundWordLines()}
+                {renderSelectionLine()}
               </Box>
-            ))}
-            {renderFoundWordLines()}
-            {renderSelectionLine()}
-          </Box>
 
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
