@@ -16,11 +16,40 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  keyframes
 } from '@mui/material'
 import { Refresh, EmojiEvents, Search } from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection, clearSelection } from '../store/wordSearchSlice'
+
+// Define keyframe animations
+const pulseAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+`
+
+const bounceAnimation = keyframes`
+  0%, 20%, 50%, 80%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+`
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
@@ -181,8 +210,10 @@ export const WordSearchPage = () => {
     return selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
   }
 
-  const isCellInHoverPath = (row: number, col: number) => {
-    if (!hoverCell || !startCell || !isDragging) return false
+  const isCellInHoverPath = (row: number, col: number): { isInPath: boolean; stepIndex: number; totalSteps: number } => {
+    if (!hoverCell || !startCell || !isDragging) {
+      return { isInPath: false, stepIndex: 0, totalSteps: 0 }
+    }
     
     const deltaRow = hoverCell.row - startCell.row
     const deltaCol = hoverCell.col - startCell.col
@@ -197,19 +228,30 @@ export const WordSearchPage = () => {
         const checkRow = startCell.row + i * stepRow
         const checkCol = startCell.col + i * stepCol
         if (checkRow === row && checkCol === col) {
-          return true
+          return { isInPath: true, stepIndex: i, totalSteps: steps }
         }
       }
     }
     
-    return false
+    return { isInPath: false, stepIndex: 0, totalSteps: 0 }
   }
 
   const getCellStyle = (row: number, col: number) => {
     const isSelected = isCellSelected(row, col)
-    const isInHoverPath = isCellInHoverPath(row, col)
+    const pathInfo = isCellInHoverPath(row, col)
+    const isInHoverPath = pathInfo.isInPath
     const isStartCell = startCell && startCell.row === row && startCell.col === col
     const isEndCell = selectionEnd && selectionEnd.row === row && selectionEnd.col === col
+    const isDraggingStart = isDragging && isStartCell
+    const isDraggingEnd = isDragging && hoverCell && hoverCell.row === row && hoverCell.col === col
+    
+    // Check if current selection direction is valid
+    const isValidDirection = startCell && hoverCell ? 
+      (() => {
+        const deltaRow = hoverCell.row - startCell.row
+        const deltaCol = hoverCell.col - startCell.col
+        return deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
+      })() : false
     
     const baseStyle = {
       width: '40px',
@@ -218,12 +260,45 @@ export const WordSearchPage = () => {
       alignItems: 'center',
       justifyContent: 'center',
       border: '1px solid #ccc',
+      borderRadius: '8px',
       cursor: 'pointer',
       userSelect: 'none' as const,
       fontSize: '16px',
       fontWeight: 'bold',
       transition: 'all 0.1s ease',
-      touchAction: 'none' // Prevent default touch behaviors
+      touchAction: 'none', // Prevent default touch behaviors
+      position: 'relative' as const,
+      zIndex: 1,
+      margin: '2px',
+      boxSizing: 'border-box' as const
+    }
+
+    // Special styling for start cell during dragging
+    if (isDraggingStart) {
+      return {
+        ...baseStyle,
+        backgroundColor: '#1565c0',
+        color: 'white',
+        border: '3px solid #0d47a1',
+        borderRadius: '10px',
+        boxShadow: '0 0 10px rgba(21, 101, 192, 0.5), inset 0 0 10px rgba(13, 71, 161, 0.3)',
+        transform: 'scale(1.1)',
+        zIndex: 10
+      }
+    }
+
+    // Special styling for end cell during dragging - only if direction is valid
+    if (isDraggingEnd && !isStartCell && isValidDirection) {
+      return {
+        ...baseStyle,
+        backgroundColor: '#1976d2',
+        color: 'white',
+        border: '3px solid #1565c0',
+        borderRadius: '10px',
+        boxShadow: '0 0 8px rgba(25, 118, 210, 0.4)',
+        transform: 'scale(1.05)',
+        zIndex: 9 // Appear above path since direction is valid
+      }
     }
 
     if (isSelected) {
@@ -231,16 +306,27 @@ export const WordSearchPage = () => {
         ...baseStyle,
         backgroundColor: isStartCell ? '#1976d2' : isEndCell ? '#1565c0' : '#2196f3',
         color: 'white',
-        border: '2px solid #1976d2'
+        border: '2px solid #1976d2',
+        borderRadius: '9px',
+        zIndex: 6 // Ensure selected cells appear above the yellow path indicator
       }
     }
 
     if (isInHoverPath) {
+      // Create gradient effect along the path
+      const progress = pathInfo.stepIndex / Math.max(pathInfo.totalSteps, 1)
+      const opacity = 0.3 + (0.4 * (1 - progress)) // Fade from start to end
+      const blueIntensity = Math.floor(227 + (28 * progress)) // Gradient from light to darker blue
+      
       return {
         ...baseStyle,
-        backgroundColor: '#e3f2fd',
+        backgroundColor: `rgba(33, 150, 243, ${opacity})`,
         color: '#1976d2',
-        border: '2px solid #2196f3'
+        border: '2px solid #2196f3',
+        borderRadius: '9px',
+        boxShadow: `0 0 ${5 + (5 * (1 - progress))}px rgba(33, 150, 243, ${opacity})`,
+        transform: `scale(${1 + (0.05 * (1 - progress))})`,
+        zIndex: 8 // Ensure hover path cells appear above the yellow path indicator
       }
     }
 
@@ -251,6 +337,91 @@ export const WordSearchPage = () => {
         backgroundColor: '#f5f5f5'
       }
     }
+  }
+
+  // Function to render selection line overlay
+  const renderSelectionLine = () => {
+    if (!isDragging || !startCell || !hoverCell || !gridRef.current) return null
+    
+    // Calculate direction validity
+    const deltaRow = hoverCell.row - startCell.row
+    const deltaCol = hoverCell.col - startCell.col
+    
+    // Check if it's a valid direction (horizontal, vertical, or diagonal)
+    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
+    
+    // Calculate SVG coordinates (accounting for cell spacing)
+    const cellSize = 40
+    const cellMargin = 4 // 2px margin on each side
+    const cellWithMargin = cellSize + cellMargin
+    const gridPadding = 16
+    const borderWidth = 2
+    
+    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    const endX = hoverCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    const endY = hoverCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    
+    // Calculate grid dimensions
+    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
+    
+    // Calculate path width (about cell width)
+    const pathWidth = cellSize * 1.05 // 105% of cell width for better appearance
+    
+    // Style based on direction validity - using more pure yellow colors
+    const validColor = isValidDirection ? "rgba(230, 220, 15, 0.5)" : "rgba(220, 190, 30, 0.5)"
+    const validBorderColor = isValidDirection ? "rgba(230, 220, 15, 0.8)" : "rgba(220, 190, 30, 0.8)"
+    
+    return (
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 5
+        }}
+      >
+        <svg
+          width={gridWidth}
+          height={gridHeight}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none'
+          }}
+        >
+          {/* Border for the rounded path */}
+          <line
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke={validBorderColor}
+            strokeWidth={pathWidth + 4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.4"
+          />
+          {/* Wide semi-transparent path with rounded edges */}
+          <line
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke={validColor}
+            strokeWidth={pathWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.8"
+          />
+        </svg>
+      </Box>
+    )
   }
 
   const getWordItemStyle = (word: string) => {
@@ -321,7 +492,9 @@ export const WordSearchPage = () => {
                   border: '2px solid #ccc',
                   borderRadius: 1,
                   backgroundColor: '#f9f9f9',
-                  touchAction: 'none' // Prevent default touch behaviors
+                  touchAction: 'none', // Prevent default touch behaviors
+                  position: 'relative',
+                  overflow: 'visible' // Allow SVG to render outside bounds if needed
                 }}
                 onMouseLeave={() => {
                   setHoverCell(null)
@@ -338,6 +511,7 @@ export const WordSearchPage = () => {
                     {row.map((cell: string, colIndex: number) => (
                       <Box
                         key={`${rowIndex}-${colIndex}`}
+                        data-cell={`${rowIndex}-${colIndex}`}
                         sx={getCellStyle(rowIndex, colIndex)}
                         onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
                         onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
@@ -352,6 +526,8 @@ export const WordSearchPage = () => {
                     ))}
                   </Box>
                 ))}
+                {/* Render the selection line overlay */}
+                {renderSelectionLine()}
               </Box>
 
               <Box sx={{ mt: 2 }}>
