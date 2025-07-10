@@ -29,6 +29,7 @@ export const WordSearchPage = () => {
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -42,6 +43,7 @@ export const WordSearchPage = () => {
     const handleGlobalMouseUp = () => {
       if (isDragging) {
         setIsDragging(false)
+        setMousePosition(null)
         dispatch(endSelection())
       }
     }
@@ -49,6 +51,7 @@ export const WordSearchPage = () => {
     const handleGlobalTouchEnd = () => {
       if (isDragging) {
         setIsDragging(false)
+        setMousePosition(null)
         dispatch(endSelection())
       }
     }
@@ -116,6 +119,46 @@ export const WordSearchPage = () => {
     dispatch(startSelection({ row, col }))
   }
 
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging || !gridRef.current) return
+    
+    const gridRect = gridRef.current.getBoundingClientRect()
+    const relativeX = event.clientX - gridRect.left
+    const relativeY = event.clientY - gridRect.top
+    
+    // Store actual mouse position relative to grid
+    setMousePosition({ x: relativeX, y: relativeY })
+    
+    // Calculate cell coordinates
+    const cellSize = 40
+    const cellMargin = 4
+    const cellWithMargin = cellSize + cellMargin
+    const gridPadding = 16
+    const borderWidth = 2
+    
+    const adjustedX = relativeX - borderWidth - gridPadding
+    const adjustedY = relativeY - borderWidth - gridPadding
+    
+    const col = Math.floor(adjustedX / cellWithMargin)
+    const row = Math.floor(adjustedY / cellWithMargin)
+    
+    // Check if mouse is close to cell center
+    const cellCenterX = col * cellWithMargin + cellSize / 2 + cellMargin / 2
+    const cellCenterY = row * cellWithMargin + cellSize / 2 + cellMargin / 2
+    const distanceToCenter = Math.sqrt(
+      Math.pow(adjustedX - cellCenterX, 2) + Math.pow(adjustedY - cellCenterY, 2)
+    )
+    
+    // Only update hover cell if mouse is close to center (within 60% of cell size) and within bounds
+    if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length && 
+        distanceToCenter < cellSize * 0.6) {
+      if (!hoverCell || hoverCell.row !== row || hoverCell.col !== col) {
+        setHoverCell({ row, col })
+        debouncedUpdateSelection(row, col)
+      }
+    }
+  }
+
   const handleMouseEnter = (row: number, col: number) => {
     setHoverCell({ row, col })
     if (isDragging && startCell) {
@@ -128,13 +171,17 @@ export const WordSearchPage = () => {
   }
 
   const handleMouseLeave = () => {
-    setHoverCell(null)
+    // Don't clear hoverCell when dragging to keep path visible between cells
+    if (!isDragging) {
+      setHoverCell(null)
+    }
   }
 
   const handleMouseUp = () => {
     if (isDragging) {
       setIsDragging(false)
       setStartCell(null)
+      setMousePosition(null)
       dispatch(endSelection())
     }
   }
@@ -167,6 +214,7 @@ export const WordSearchPage = () => {
     if (isDragging) {
       setIsDragging(false)
       setStartCell(null)
+      setMousePosition(null)
       dispatch(endSelection())
     }
   }
@@ -313,14 +361,7 @@ export const WordSearchPage = () => {
 
   // Function to render selection line overlay
   const renderSelectionLine = () => {
-    if (!isDragging || !startCell || !hoverCell || !gridRef.current) return null
-    
-    // Calculate direction validity
-    const deltaRow = hoverCell.row - startCell.row
-    const deltaCol = hoverCell.col - startCell.col
-    
-    // Check if it's a valid direction (horizontal, vertical, or diagonal)
-    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
+    if (!isDragging || !startCell || !gridRef.current) return null
     
     // Calculate SVG coordinates (accounting for cell spacing)
     const cellSize = 40
@@ -331,8 +372,41 @@ export const WordSearchPage = () => {
     
     const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
     const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endX = hoverCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endY = hoverCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    
+    let endX: number, endY: number
+    let isValidDirection = false
+    
+    if (hoverCell) {
+      // Mouse is close to a cell center - use cell coordinates
+      endX = hoverCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+      endY = hoverCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+      
+      // Calculate direction validity
+      const deltaRow = hoverCell.row - startCell.row
+      const deltaCol = hoverCell.col - startCell.col
+      isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
+    } else if (mousePosition) {
+      // Mouse is between cells - use actual mouse position
+      endX = mousePosition.x
+      endY = mousePosition.y
+      
+      // Calculate direction validity based on mouse position
+      const deltaX = endX - startX
+      const deltaY = endY - startY
+      const angle = Math.atan2(deltaY, deltaX)
+      const angleDegrees = (angle * 180 / Math.PI + 360) % 360
+      
+      // Check if angle is close to valid directions (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°)
+      const validAngles = [0, 45, 90, 135, 180, 225, 270, 315]
+      const tolerance = 15 // degrees
+      isValidDirection = validAngles.some(validAngle => 
+        Math.abs(angleDegrees - validAngle) <= tolerance ||
+        Math.abs(angleDegrees - validAngle - 360) <= tolerance ||
+        Math.abs(angleDegrees - validAngle + 360) <= tolerance
+      )
+    } else {
+      return null
+    }
     
     // Calculate grid dimensions
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
@@ -470,12 +544,14 @@ export const WordSearchPage = () => {
                 }}
                 onMouseLeave={() => {
                   setHoverCell(null)
+                  setMousePosition(null)
                   if (isDragging) {
                     setIsDragging(false)
                     setStartCell(null)
                     dispatch(clearSelection())
                   }
                 }}
+                onMouseMove={handleMouseMove}
                 onTouchMove={handleTouchMove}
               >
                 {grid.map((row: string[], rowIndex: number) => (
