@@ -478,16 +478,6 @@ export const WordSearchPage = () => {
             <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
               Word Search
             </Typography>
-            <Chip 
-              label={`${foundWords.length}/${words.length}`}
-              size="small"
-              sx={{ 
-                mr: 1,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                fontSize: '0.75rem'
-              }}
-            />
             <FormControl size="small" sx={{ minWidth: 80, mr: 1 }}>
               <Select
                 value={difficulty}
@@ -515,6 +505,7 @@ export const WordSearchPage = () => {
           pt: '48px', // Account for header height
           height: '100%',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden'
@@ -554,6 +545,16 @@ export const WordSearchPage = () => {
             ))}
             {renderFoundWordLines()}
             {renderSelectionLine()}
+          </Box>
+          
+          {/* Word Counter */}
+          <Box sx={{ mt: 2 }}>
+            <Chip 
+              label={`${foundWords.length}/${words.length} words found`}
+              color="primary"
+              variant="outlined"
+              size="medium"
+            />
           </Box>
         </Box>
 
@@ -669,12 +670,6 @@ export const WordSearchPage = () => {
                   Game Grid
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                  <Chip 
-                    label={`${foundWords.length}/${words.length} words`}
-                    color="primary"
-                    variant="outlined"
-                    size="small"
-                  />
                   <FormControl size="small" sx={{ minWidth: 120 }}>
                     <InputLabel>Difficulty</InputLabel>
                     <Select
@@ -744,6 +739,15 @@ export const WordSearchPage = () => {
             {renderFoundWordLines()}
             {renderSelectionLine()}
           </Box>
+
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                <Chip 
+                  label={`${foundWords.length}/${words.length} words found`}
+                  color="primary"
+                  variant="outlined"
+                  size="medium"
+                />
+              </Box>
 
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
