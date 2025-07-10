@@ -24,7 +24,7 @@ import { newGame, startSelection, updateSelection, endSelection } from '../store
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
-  const { grid, words, foundWords, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
+  const { grid, words, foundWords, foundWordPositions, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
@@ -157,6 +157,12 @@ export const WordSearchPage = () => {
     return selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
   }
 
+  const isCellInFoundWord = (row: number, col: number) => {
+    return foundWordPositions.some((wordPosition: { word: string; cells: Array<{ row: number; col: number }> }) =>
+      wordPosition.cells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
+    )
+  }
+
   const isCellInCurrentPath = (row: number, col: number): boolean => {
     if (!currentCell || !startCell || !isDragging) return false
     
@@ -186,6 +192,7 @@ export const WordSearchPage = () => {
   const getCellStyle = (row: number, col: number) => {
     const isSelected = isCellSelected(row, col)
     const isInCurrentPath = isCellInCurrentPath(row, col)
+    const isInFoundWord = isCellInFoundWord(row, col)
     const isStartCell = startCell && startCell.row === row && startCell.col === col
     const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
     const isDraggingStart = isDragging && isStartCell
@@ -259,6 +266,17 @@ export const WordSearchPage = () => {
         borderRadius: '9px',
         boxShadow: '0 0 5px rgba(33, 150, 243, 0.4)',
         zIndex: 8
+      }
+    }
+
+    if (isInFoundWord) {
+      return {
+        ...baseStyle,
+        backgroundColor: 'rgba(76, 175, 80, 0.3)', // Light green
+        color: '#2e7d32',
+        border: '1px solid #4caf50',
+        borderRadius: '8px',
+        zIndex: 2
       }
     }
 

@@ -4,6 +4,7 @@ interface WordSearchState {
   grid: string[][]
   words: string[]
   foundWords: string[]
+  foundWordPositions: Array<{ word: string; cells: Array<{ row: number; col: number }> }>
   selectedCells: Array<{ row: number; col: number }>
   gameWon: boolean
   isSelecting: boolean
@@ -23,6 +24,7 @@ const initialState: WordSearchState = {
   grid: [],
   words: [],
   foundWords: [],
+  foundWordPositions: [],
   selectedCells: [],
   gameWon: false,
   isSelecting: false,
@@ -118,6 +120,7 @@ export const wordSearchSlice = createSlice({
       state.words = [...WORD_LISTS[action.payload.difficulty]]
       state.grid = generateGrid(state.gameSize, state.words)
       state.foundWords = []
+      state.foundWordPositions = []
       state.selectedCells = []
       state.gameWon = false
       state.isSelecting = false
@@ -169,8 +172,16 @@ export const wordSearchSlice = createSlice({
         
         if (state.words.includes(selectedWord) && !state.foundWords.includes(selectedWord)) {
           state.foundWords.push(selectedWord)
+          state.foundWordPositions.push({
+            word: selectedWord,
+            cells: [...state.selectedCells]
+          })
         } else if (state.words.includes(reversedWord) && !state.foundWords.includes(reversedWord)) {
           state.foundWords.push(reversedWord)
+          state.foundWordPositions.push({
+            word: reversedWord,
+            cells: [...state.selectedCells]
+          })
         }
         
         // Check if all words are found
