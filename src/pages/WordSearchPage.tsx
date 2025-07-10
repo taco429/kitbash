@@ -17,43 +17,15 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
-  keyframes
 } from '@mui/material'
 import { Refresh, EmojiEvents, Search } from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection, clearSelection } from '../store/wordSearchSlice'
 
-// Define keyframe animations
-const pulseAnimation = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-`
-
-const bounceAnimation = keyframes`
-  0%, 20%, 50%, 80%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-  }
-  40% {
-    transform: translate(-50%, -50%) scale(1.3);
-  }
-  60% {
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-`
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
-  const { grid, words, foundWords, selectedCells, gameWon, difficulty, isSelecting, selectionStart, selectionEnd } = useAppSelector((state: any) => state.wordSearch)
+  const { grid, words, foundWords, gameWon, difficulty, selectionEnd } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
