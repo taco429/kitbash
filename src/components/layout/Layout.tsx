@@ -18,6 +18,7 @@ import {
 import {
   Menu as MenuIcon,
   Home,
+  Info,
   Add,
   FormatListBulleted,
   Code,
@@ -39,6 +40,7 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   { text: 'Home', icon: <Home />, path: '/' },
+  { text: 'Project Info', icon: <Info />, path: '/info' },
   { text: 'Counter Demo', icon: <Add />, path: '/counter' },
   { text: 'Todo List Demo', icon: <FormatListBulleted />, path: '/todos' },
   { text: 'Tower Defense', icon: <Games />, path: '/tower-defense' },
@@ -121,11 +123,11 @@ export const Layout = ({ children }: LayoutProps) => {
           </IconButton>
           <Code sx={{ mr: 2 }} />
           <Typography variant="h6" noWrap component="div">
-            Modern React App
+            Kitbash
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2">
-            React + TypeScript + MUI + Redux Toolkit
+            A fun web playground
           </Typography>
         </Toolbar>
       </AppBar>
