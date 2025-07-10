@@ -45,7 +45,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
 
-export const WordSearchPage = () => {
+export const ClassicWordSearchPage = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const theme = useTheme()
@@ -65,7 +65,7 @@ export const WordSearchPage = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
   const handleBack = () => {
-    navigate('/')
+    navigate('/word-search')
   }
 
   const handleStartGame = () => {
@@ -499,9 +499,8 @@ export const WordSearchPage = () => {
     
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
     const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const pathWidth = cellSize * 1.05
     
-    const validColor = isValidDirection ? "rgba(230, 220, 15, 0.5)" : "rgba(220, 190, 30, 0.5)"
+    if (!isValidDirection) return null
     
     return (
       <Box
@@ -512,7 +511,7 @@ export const WordSearchPage = () => {
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          zIndex: 5
+          zIndex: 7 // Above path cells (5) and found word cells (2)
         }}
       >
         <svg
@@ -530,8 +529,8 @@ export const WordSearchPage = () => {
             y1={startY}
             x2={endX}
             y2={endY}
-            stroke={validColor}
-            strokeWidth={pathWidth}
+            stroke="#1976d2"
+            strokeWidth={4}
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity="0.8"
@@ -542,11 +541,10 @@ export const WordSearchPage = () => {
   }
 
   const getWordItemStyle = (word: string) => {
-    const isFound = foundWords.includes(word)
     return {
-      textDecoration: isFound ? 'line-through' : 'none',
-      color: isFound ? '#4caf50' : 'inherit',
-      fontWeight: isFound ? 'bold' : 'normal'
+      textDecoration: foundWords.includes(word) ? 'line-through' : 'none',
+      color: foundWords.includes(word) ? '#4caf50' : 'inherit',
+      fontWeight: foundWords.includes(word) ? 'bold' : 'normal'
     }
   }
 
@@ -560,7 +558,7 @@ export const WordSearchPage = () => {
   }
 
   const handleGoHome = () => {
-    navigate('/')
+    navigate('/word-search')
   }
 
   const getDifficultyColor = (diff: string) => {
@@ -716,7 +714,7 @@ export const WordSearchPage = () => {
             }
           }}
         >
-          Home
+          Back to Games
         </Button>
       </DialogActions>
     </Dialog>
@@ -743,7 +741,7 @@ export const WordSearchPage = () => {
               <ArrowBack />
             </IconButton>
             <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
-              Word Search
+              Classic Word Search
             </Typography>
             <FormControl size="small" sx={{ minWidth: 80, mr: 1 }}>
               <Select
@@ -906,8 +904,6 @@ export const WordSearchPage = () => {
               Progress: {foundWords.length} / {words.length} words found
             </Typography>
 
-
-
             <List dense>
               {words.map((word: string, index: number) => (
                 <ListItem key={index} disablePadding>
@@ -928,8 +924,6 @@ export const WordSearchPage = () => {
                 </ListItem>
               ))}
             </List>
-
-
           </Box>
         </Drawer>
         
@@ -942,9 +936,14 @@ export const WordSearchPage = () => {
   // Desktop layout
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Typography variant="h3" component="h1" gutterBottom>
-        Word Search Game
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton onClick={handleBack} sx={{ mr: 2 }}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h3" component="h1">
+          Classic Word Search
+        </Typography>
+      </Box>
       <Typography variant="h6" color="text.secondary" paragraph>
         Find all the hidden words in the grid by clicking and dragging over them (works on mobile too!)
       </Typography>
@@ -986,8 +985,6 @@ export const WordSearchPage = () => {
                   {formatTimer()}
                 </Typography>
               </Box>
-
-
 
               <Box 
                 ref={gridRef}
@@ -1110,8 +1107,6 @@ export const WordSearchPage = () => {
                   </ListItem>
                 ))}
               </List>
-
-
             </CardContent>
           </Card>
         </Grid>
