@@ -7,7 +7,8 @@ import { InfoPage } from './pages/InfoPage'
 import { CounterPage } from './pages/CounterPage'
 import { TodoPage } from './pages/TodoPage'
 import { TowerDefensePage } from './pages/TowerDefensePage'
-import { WordSearchPage } from './pages/WordSearchPage'
+import { WordSearchHubPage } from './pages/WordSearchHubPage'
+import { ClassicWordSearchPage } from './pages/ClassicWordSearchPage'
 
 const theme = createTheme({
   palette: {
@@ -33,7 +34,8 @@ function App() {
             <Route path="/counter" element={<CounterPage />} />
             <Route path="/todos" element={<TodoPage />} />
             <Route path="/tower-defense" element={<TowerDefensePage />} />
-            <Route path="/word-search" element={<WordSearchPage />} />
+            <Route path="/word-search" element={<WordSearchHubPage />} />
+            <Route path="/word-search/classic" element={<ClassicWordSearchPage />} />
           </Routes>
         </Layout>
       </Router>
