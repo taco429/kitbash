@@ -289,6 +289,72 @@ export const WordSearchPage = () => {
     }
   }
 
+  // Function to render lines through found words
+  const renderFoundWordLines = () => {
+    if (!gridRef.current || foundWordPositions.length === 0) return null
+    
+    const cellSize = 40
+    const cellMargin = 4
+    const cellWithMargin = cellSize + cellMargin
+    const gridPadding = 16
+    const borderWidth = 2
+    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
+    
+    return (
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 3 // Below active selection (5) but above found word cells (2)
+        }}
+      >
+        <svg
+          width={gridWidth}
+          height={gridHeight}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none'
+          }}
+        >
+          {foundWordPositions.map((wordPosition: { word: string; cells: Array<{ row: number; col: number }> }, index: number) => {
+            if (wordPosition.cells.length < 2) return null
+            
+            const firstCell = wordPosition.cells[0]
+            const lastCell = wordPosition.cells[wordPosition.cells.length - 1]
+            
+            // Simplified coordinate calculation - cell center is at col/row * cellWithMargin + cellSize/2 + offset
+            const startX = firstCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const startY = firstCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const endX = lastCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const endY = lastCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            
+            return (
+              <line
+                key={`found-word-line-${index}`}
+                x1={startX}
+                y1={startY}
+                x2={endX}
+                y2={endY}
+                stroke="#4caf50"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.8"
+              />
+            )
+          })}
+        </svg>
+      </Box>
+    )
+  }
+
   // Simplified selection line rendering
   const renderSelectionLine = () => {
     if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
@@ -299,10 +365,11 @@ export const WordSearchPage = () => {
     const gridPadding = 16
     const borderWidth = 2
     
-    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    // Use the same coordinate calculation as found word lines for consistency
+    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
     
     // Check if direction is valid
     const deltaRow = currentCell.row - startCell.row
@@ -442,12 +509,13 @@ export const WordSearchPage = () => {
                         onClick={() => handleCellClick(rowIndex, colIndex)}
                       >
                         {cell}
-                      </Box>
-                    ))}
-                  </Box>
+                                        </Box>
                 ))}
-                {renderSelectionLine()}
               </Box>
+            ))}
+            {renderFoundWordLines()}
+            {renderSelectionLine()}
+          </Box>
 
               <Box sx={{ mt: 2 }}>
                 <Typography variant="body2" color="text.secondary">
