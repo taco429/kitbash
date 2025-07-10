@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { CssBaseline } from '@mui/material'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
+import { InfoPage } from './pages/InfoPage'
 import { CounterPage } from './pages/CounterPage'
 import { TodoPage } from './pages/TodoPage'
 import { TowerDefensePage } from './pages/TowerDefensePage'
@@ -28,6 +29,7 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/info" element={<InfoPage />} />
             <Route path="/counter" element={<CounterPage />} />
             <Route path="/todos" element={<TodoPage />} />
             <Route path="/tower-defense" element={<TowerDefensePage />} />

@@ -4,44 +4,16 @@ import {
   Typography, 
   Box, 
   Grid,
-  Chip,
   List,
   ListItem,
   ListItemIcon,
   ListItemText
 } from '@mui/material'
 import { 
-  Code, 
-  Speed, 
-  Security, 
-  Palette, 
   CheckCircle 
 } from '@mui/icons-material'
 
 export const HomePage = () => {
-  const features = [
-    {
-      icon: <Code />,
-      title: 'TypeScript',
-      description: 'Type-safe development with modern TypeScript'
-    },
-    {
-      icon: <Speed />,
-      title: 'Vite',
-      description: 'Lightning-fast build tool and dev server'
-    },
-    {
-      icon: <Palette />,
-      title: 'Material-UI',
-      description: 'Beautiful React components with Material Design'
-    },
-    {
-      icon: <Security />,
-      title: 'Redux Toolkit',
-      description: 'Modern state management with Redux'
-    }
-  ]
-
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h3" component="h1" gutterBottom>
@@ -49,7 +21,8 @@ export const HomePage = () => {
       </Typography>
       
       <Typography variant="h6" color="text.secondary" paragraph>
-        A modern React application showcasing the latest technologies and best practices
+        A fun web project where I experiment with different ideas and build interactive demos. 
+        Feel free to explore and play around!
       </Typography>
 
       <Grid container spacing={3}>
@@ -57,37 +30,23 @@ export const HomePage = () => {
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h5" component="h2" gutterBottom>
-                🚀 Modern Tech Stack
+                🎉 What's This All About?
               </Typography>
               <Typography variant="body1" paragraph>
-                This application demonstrates how to build modern React applications using
-                the latest technologies and development practices.
+                This is my personal playground for web development experiments! I use this space to 
+                try out new ideas, build fun interactive demos, and just have a good time coding.
               </Typography>
               
-              <Box sx={{ mb: 3 }}>
-                <Chip label="React 18" color="primary" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="TypeScript" color="primary" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="Vite" color="secondary" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="Material-UI" color="secondary" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="Redux Toolkit" color="success" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="React Router" color="success" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="Canvas API" color="warning" sx={{ mr: 1, mb: 1 }} />
-                <Chip label="Game Loop" color="warning" sx={{ mr: 1, mb: 1 }} />
-              </Box>
+              <Typography variant="body1" paragraph>
+                Think of it as a digital workbench where I "kitbash" different concepts together - 
+                borrowing ideas from here and there to create something new and interesting.
+              </Typography>
 
-              <List>
-                {features.map((feature, index) => (
-                  <ListItem key={index} disablePadding>
-                    <ListItemIcon>
-                      {feature.icon}
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={feature.title}
-                      secondary={feature.description}
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              <Typography variant="body1">
+                Each demo page showcases different types of interactions and functionality. 
+                Some are practical (like the todo list), others are just for fun (like the games). 
+                Take a look around and see what catches your interest!
+              </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -109,7 +68,7 @@ export const HomePage = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Counter Demo"
-                    secondary="Redux state management"
+                    secondary="Simple counter with increment/decrement"
                   />
                 </ListItem>
                 <ListItem>
@@ -118,7 +77,7 @@ export const HomePage = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Todo List Demo"
-                    secondary="CRUD operations with Redux"
+                    secondary="Manage your tasks with full CRUD operations"
                   />
                 </ListItem>
                 <ListItem>
@@ -127,7 +86,7 @@ export const HomePage = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Tower Defense Game"
-                    secondary="Interactive game with Canvas rendering"
+                    secondary="Strategic tower placement game"
                   />
                 </ListItem>
                 <ListItem>
@@ -136,7 +95,7 @@ export const HomePage = () => {
                   </ListItemIcon>
                   <ListItemText 
                     primary="Word Search Game"
-                    secondary="Interactive word search puzzle game"
+                    secondary="Find hidden words in the puzzle grid"
                   />
                 </ListItem>
               </List>
