@@ -23,7 +23,12 @@ import {
   Fab,
   Drawer,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider
 } from '@mui/material'
 import { 
   Refresh, 
@@ -32,7 +37,10 @@ import {
   ArrowBack,
   List as ListIcon,
   Close as CloseIcon,
-  PlayArrow
+  PlayArrow,
+  Home as HomeIcon,
+  Timer as TimerIcon,
+  Star as StarIcon
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
@@ -52,6 +60,8 @@ export const WordSearchPage = () => {
   const [minutes, setMinutes] = useState(0)
   const [seconds, setSeconds] = useState(0)
   const [milliseconds, setMilliseconds] = useState(0)
+  const [congratulationOpen, setCongratulationOpen] = useState(false)
+  const [finalTime, setFinalTime] = useState('')
   const gridRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -120,6 +130,14 @@ export const WordSearchPage = () => {
     }
   }, [grid]) // Reset when grid changes (new game)
 
+  // Handle game won state
+  useEffect(() => {
+    if (gameWon && gameStarted) {
+      setFinalTime(formatTimer())
+      setCongratulationOpen(true)
+    }
+  }, [gameWon, gameStarted])
+
   // Prevent body scrolling on mobile word search
   useEffect(() => {
     if (isMobile) {
@@ -161,6 +179,7 @@ export const WordSearchPage = () => {
   }
 
   const handleNewGame = () => {
+    setCongratulationOpen(false)
     dispatch(newGame({ difficulty }))
   }
 
@@ -532,6 +551,178 @@ export const WordSearchPage = () => {
     }
   }
 
+  const handleCongratulationClose = () => {
+    setCongratulationOpen(false)
+  }
+
+  const handlePlayAgainFromCongratulation = () => {
+    setCongratulationOpen(false)
+    handleNewGame()
+  }
+
+  const handleGoHome = () => {
+    navigate('/')
+  }
+
+  const getDifficultyColor = (diff: string) => {
+    switch (diff) {
+      case 'easy': return '#4caf50'
+      case 'medium': return '#ff9800'
+      case 'hard': return '#f44336'
+      default: return '#2196f3'
+    }
+  }
+
+  const getDifficultyStars = (diff: string) => {
+    switch (diff) {
+      case 'easy': return 1
+      case 'medium': return 2
+      case 'hard': return 3
+      default: return 1
+    }
+  }
+
+  // Congratulation Dialog Component
+  const CongratulationDialog = () => (
+    <Dialog
+      open={congratulationOpen}
+      onClose={handleCongratulationClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          textAlign: 'center'
+        }
+      }}
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <EmojiEvents sx={{ fontSize: 60, color: '#ffd700' }} />
+          <Typography variant="h4" component="h2" fontWeight="bold">
+            Congratulations!
+          </Typography>
+          <Typography variant="h6" sx={{ opacity: 0.9 }}>
+            You found all the words!
+          </Typography>
+        </Box>
+      </DialogTitle>
+      
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
+          {/* Time Display */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: 2,
+            p: 2
+          }}>
+            <TimerIcon sx={{ fontSize: 32 }} />
+            <Box>
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                Completion Time
+              </Typography>
+              <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
+                {finalTime}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Difficulty Display */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: 2,
+            p: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                Difficulty:
+              </Typography>
+              <Typography 
+                variant="h6" 
+                fontWeight="bold"
+                sx={{ 
+                  color: getDifficultyColor(difficulty),
+                  textTransform: 'capitalize'
+                }}
+              >
+                {difficulty}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {[...Array(getDifficultyStars(difficulty))].map((_, i) => (
+                  <StarIcon key={i} sx={{ color: '#ffd700', fontSize: 20 }} />
+                ))}
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Words Found */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: 1,
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: 2,
+            p: 2
+          }}>
+            <EmojiEvents sx={{ fontSize: 24 }} />
+            <Typography variant="h6">
+              {foundWords.length} words found!
+            </Typography>
+          </Box>
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3 }}>
+        <Button
+          variant="contained"
+          onClick={handlePlayAgainFromCongratulation}
+          startIcon={<Refresh />}
+          sx={{
+            backgroundColor: '#4caf50',
+            color: 'white',
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            '&:hover': {
+              backgroundColor: '#45a049'
+            }
+          }}
+        >
+          Play Again
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={handleGoHome}
+          startIcon={<HomeIcon />}
+          sx={{
+            borderColor: 'white',
+            color: 'white',
+            px: 3,
+            py: 1,
+            borderRadius: 2,
+            '&:hover': {
+              borderColor: 'white',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)'
+            }
+          }}
+        >
+          Home
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+
   // Mobile full-screen layout
   if (isMobile) {
     return (
@@ -716,15 +907,7 @@ export const WordSearchPage = () => {
               Progress: {foundWords.length} / {words.length} words found
             </Typography>
 
-            {gameWon && (
-              <Chip 
-                icon={<EmojiEvents />} 
-                label="All words found!" 
-                color="success" 
-                size="medium"
-                sx={{ mb: 2, width: '100%' }}
-              />
-            )}
+
 
             <List dense>
               {words.map((word: string, index: number) => (
@@ -747,23 +930,12 @@ export const WordSearchPage = () => {
               ))}
             </List>
 
-            {gameWon && (
-              <Button
-                variant="contained"
-                color="success"
-                fullWidth
-                onClick={() => {
-                  handleNewGame()
-                  setWordBankOpen(false)
-                }}
-                startIcon={<Refresh />}
-                sx={{ mt: 2 }}
-              >
-                Play Again
-              </Button>
-            )}
+
           </Box>
         </Drawer>
+        
+        {/* Congratulation Dialog */}
+        <CongratulationDialog />
       </Box>
     )
   }
@@ -816,16 +988,7 @@ export const WordSearchPage = () => {
                 </Typography>
               </Box>
 
-              {gameWon && (
-                <Box sx={{ mb: 2 }}>
-                  <Chip 
-                    icon={<EmojiEvents />} 
-                    label="Congratulations! You found all words!" 
-                    color="success" 
-                    size="medium"
-                  />
-                </Box>
-              )}
+
 
               <Box 
                 ref={gridRef}
@@ -949,23 +1112,14 @@ export const WordSearchPage = () => {
                 ))}
               </List>
 
-              {gameWon && (
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    fullWidth
-                    onClick={handleNewGame}
-                    startIcon={<Refresh />}
-                  >
-                    Play Again
-                  </Button>
-                </Box>
-              )}
+
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Congratulation Dialog */}
+      <CongratulationDialog />
     </Container>
   )
 }
