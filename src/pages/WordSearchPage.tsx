@@ -75,7 +75,7 @@ export const WordSearchPage = () => {
   }
 
   // Utility function to get cell coordinates from a touch or mouse event
-  const getCellFromEvent = useCallback((event: React.TouchEvent | React.MouseEvent, clientX: number, clientY: number) => {
+  const getCellFromEvent = useCallback((clientX: number, clientY: number) => {
     if (!gridRef.current) return null
     
     const gridRect = gridRef.current.getBoundingClientRect()
@@ -199,7 +199,7 @@ export const WordSearchPage = () => {
     if (!isDragging || !startCell) return
     
     const touch = event.touches[0]
-    const cell = getCellFromEvent(event, touch.clientX, touch.clientY)
+    const cell = getCellFromEvent(touch.clientX, touch.clientY)
     
     if (cell) {
       const distance = Math.abs(cell.row - startCell.row) + Math.abs(cell.col - startCell.col)
@@ -336,7 +336,6 @@ export const WordSearchPage = () => {
       // Create gradient effect along the path
       const progress = pathInfo.stepIndex / Math.max(pathInfo.totalSteps, 1)
       const opacity = 0.3 + (0.4 * (1 - progress)) // Fade from start to end
-      const blueIntensity = Math.floor(227 + (28 * progress)) // Gradient from light to darker blue
       
       return {
         ...baseStyle,
