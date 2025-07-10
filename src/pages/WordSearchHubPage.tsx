@@ -50,6 +50,18 @@ export const WordSearchHubPage = () => {
       available: true
     },
     {
+      id: 'one-word-rush',
+      title: 'One Word Rush',
+      description: 'Fast-paced single word finding! Find one word at a time under intense time pressure.',
+      icon: <Timer sx={{ fontSize: 40 }} />,
+      difficulty: 'Medium',
+      estimatedTime: '5-10 min',
+      features: ['30 seconds per word', 'Combo system', 'Speed bonuses', 'Score multipliers'],
+      route: '/word-search/one-word-rush',
+      color: '#ff5722',
+      available: true
+    },
+    {
       id: 'speed',
       title: 'Speed Challenge',
       description: 'Race against time to find words as quickly as possible. For competitive players who love a challenge.',
