@@ -8,9 +8,7 @@ import {
   Grid,
   Button,
   Avatar,
-  Chip,
-  useTheme,
-  useMediaQuery
+  Chip
 } from '@mui/material'
 import { 
   Search, 
@@ -37,8 +35,6 @@ interface GameTypeCard {
 
 export const WordSearchHubPage = () => {
   const navigate = useNavigate()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const gameTypes: GameTypeCard[] = [
     {
