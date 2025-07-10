@@ -20,17 +20,14 @@ import {
 } from '@mui/material'
 import { Refresh, EmojiEvents, Search } from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
-import { newGame, startSelection, updateSelection, endSelection, clearSelection } from '../store/wordSearchSlice'
-
+import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
-  const { grid, words, foundWords, selectedCells, gameWon, difficulty, selectionEnd } = useAppSelector((state: any) => state.wordSearch)
+  const { grid, words, foundWords, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
-  const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null)
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -38,30 +35,23 @@ export const WordSearchPage = () => {
     dispatch(newGame({ difficulty: 'easy' }))
   }, [dispatch])
 
-  // Add global mouse up handler to handle cases where mouse up happens outside the grid
+  // Global event handlers to end selection when drag ends outside grid
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    const handleGlobalEnd = () => {
       if (isDragging) {
         setIsDragging(false)
-        setMousePosition(null)
+        setStartCell(null)
+        setCurrentCell(null)
         dispatch(endSelection())
       }
     }
 
-    const handleGlobalTouchEnd = () => {
-      if (isDragging) {
-        setIsDragging(false)
-        setMousePosition(null)
-        dispatch(endSelection())
-      }
-    }
-
-    document.addEventListener('mouseup', handleGlobalMouseUp)
-    document.addEventListener('touchend', handleGlobalTouchEnd)
+    document.addEventListener('mouseup', handleGlobalEnd)
+    document.addEventListener('touchend', handleGlobalEnd)
     
     return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp)
-      document.removeEventListener('touchend', handleGlobalTouchEnd)
+      document.removeEventListener('mouseup', handleGlobalEnd)
+      document.removeEventListener('touchend', handleGlobalEnd)
     }
   }, [isDragging, dispatch])
 
@@ -74,151 +64,88 @@ export const WordSearchPage = () => {
     dispatch(newGame({ difficulty }))
   }
 
-  // Utility function to get cell coordinates from a touch or mouse event
-  const getCellFromEvent = useCallback((clientX: number, clientY: number) => {
+  // Simplified function to get cell from coordinates
+  const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null
     
-    const gridRect = gridRef.current.getBoundingClientRect()
-    const relativeX = clientX - gridRect.left
-    const relativeY = clientY - gridRect.top
+    // Use elementFromPoint to directly find which cell element is under the coordinates
+    const element = document.elementFromPoint(clientX, clientY)
     
-    // Calculate cell size based on grid dimensions
-    const cellSize = 40 // Base cell size
-    const borderWidth = 2 // Grid border
-    const padding = 16 // Grid padding
-    
-    const adjustedX = relativeX - borderWidth - padding
-    const adjustedY = relativeY - borderWidth - padding
-    
-    const col = Math.floor(adjustedX / cellSize)
-    const row = Math.floor(adjustedY / cellSize)
-    
-    // Validate bounds
-    if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
-      return { row, col }
+    if (element && element.hasAttribute('data-cell')) {
+      const cellData = element.getAttribute('data-cell')
+      if (cellData) {
+        const [row, col] = cellData.split('-').map(Number)
+        if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
+          return { row, col }
+        }
+      }
     }
     
     return null
   }, [grid])
 
-  // Debounced update selection to prevent rapid updates
-  const debouncedUpdateSelection = useCallback((row: number, col: number) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current)
-    }
-    
-    debounceTimeoutRef.current = setTimeout(() => {
-      dispatch(updateSelection({ row, col }))
-    }, 16) // ~60fps update rate
-  }, [dispatch])
-
-  // Mouse event handlers
-  const handleMouseDown = (row: number, col: number) => {
+  // Unified start handler for both mouse and touch
+  const handleSelectionStart = (row: number, col: number) => {
     setIsDragging(true)
     setStartCell({ row, col })
+    setCurrentCell({ row, col })
     dispatch(startSelection({ row, col }))
   }
 
-  const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isDragging || !gridRef.current) return
-    
-    const gridRect = gridRef.current.getBoundingClientRect()
-    const relativeX = event.clientX - gridRect.left
-    const relativeY = event.clientY - gridRect.top
-    
-    // Store actual mouse position relative to grid
-    setMousePosition({ x: relativeX, y: relativeY })
-    
-    // Calculate cell coordinates
-    const cellSize = 40
-    const cellMargin = 4
-    const cellWithMargin = cellSize + cellMargin
-    const gridPadding = 16
-    const borderWidth = 2
-    
-    const adjustedX = relativeX - borderWidth - gridPadding
-    const adjustedY = relativeY - borderWidth - gridPadding
-    
-    const col = Math.floor(adjustedX / cellWithMargin)
-    const row = Math.floor(adjustedY / cellWithMargin)
-    
-    // Check if mouse is close to cell center
-    const cellCenterX = col * cellWithMargin + cellSize / 2 + cellMargin / 2
-    const cellCenterY = row * cellWithMargin + cellSize / 2 + cellMargin / 2
-    const distanceToCenter = Math.sqrt(
-      Math.pow(adjustedX - cellCenterX, 2) + Math.pow(adjustedY - cellCenterY, 2)
-    )
-    
-    // Only update hover cell if mouse is close to center (within 60% of cell size) and within bounds
-    if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length && 
-        distanceToCenter < cellSize * 0.6) {
-      if (!hoverCell || hoverCell.row !== row || hoverCell.col !== col) {
-        setHoverCell({ row, col })
-        debouncedUpdateSelection(row, col)
-      }
+  // Unified move handler for both mouse and touch
+  const handleSelectionMove = (clientX: number, clientY: number) => {
+    if (!isDragging || !startCell) return
+
+    const cell = getCellFromCoordinates(clientX, clientY)
+    if (cell && (!currentCell || cell.row !== currentCell.row || cell.col !== currentCell.col)) {
+      setCurrentCell(cell)
+      dispatch(updateSelection({ row: cell.row, col: cell.col }))
     }
   }
 
-  const handleMouseEnter = (row: number, col: number) => {
-    setHoverCell({ row, col })
-    if (isDragging && startCell) {
-      // Only update if we're significantly moving from the start position
-      const distance = Math.abs(row - startCell.row) + Math.abs(col - startCell.col)
-      if (distance > 0) {
-        debouncedUpdateSelection(row, col)
-      }
-    }
-  }
-
-  const handleMouseLeave = () => {
-    // Don't clear hoverCell when dragging to keep path visible between cells
-    if (!isDragging) {
-      setHoverCell(null)
-    }
-  }
-
-  const handleMouseUp = () => {
+  // Unified end handler for both mouse and touch
+  const handleSelectionEnd = () => {
     if (isDragging) {
       setIsDragging(false)
       setStartCell(null)
-      setMousePosition(null)
+      setCurrentCell(null)
       dispatch(endSelection())
     }
+  }
+
+  // Mouse event handlers
+  const handleMouseDown = (row: number, col: number) => {
+    handleSelectionStart(row, col)
+  }
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    handleSelectionMove(event.clientX, event.clientY)
+  }
+
+  const handleMouseUp = () => {
+    handleSelectionEnd()
   }
 
   // Touch event handlers
   const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
     event.preventDefault()
-    setIsDragging(true)
-    setStartCell({ row, col })
-    dispatch(startSelection({ row, col }))
+    handleSelectionStart(row, col)
   }
 
   const handleTouchMove = (event: React.TouchEvent) => {
     event.preventDefault()
-    if (!isDragging || !startCell) return
-    
-    const touch = event.touches[0]
-    const cell = getCellFromEvent(touch.clientX, touch.clientY)
-    
-    if (cell) {
-      const distance = Math.abs(cell.row - startCell.row) + Math.abs(cell.col - startCell.col)
-      if (distance > 0) {
-        debouncedUpdateSelection(cell.row, cell.col)
-      }
+    if (event.touches.length > 0) {
+      const touch = event.touches[0]
+      handleSelectionMove(touch.clientX, touch.clientY)
     }
   }
 
   const handleTouchEnd = (event: React.TouchEvent) => {
     event.preventDefault()
-    if (isDragging) {
-      setIsDragging(false)
-      setStartCell(null)
-      setMousePosition(null)
-      dispatch(endSelection())
-    }
+    handleSelectionEnd()
   }
 
+  // Click handler for single cell selection
   const handleCellClick = (row: number, col: number) => {
     if (!isDragging) {
       dispatch(startSelection({ row, col }))
@@ -230,48 +157,39 @@ export const WordSearchPage = () => {
     return selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
   }
 
-  const isCellInHoverPath = (row: number, col: number): { isInPath: boolean; stepIndex: number; totalSteps: number } => {
-    if (!hoverCell || !startCell || !isDragging) {
-      return { isInPath: false, stepIndex: 0, totalSteps: 0 }
-    }
+  const isCellInCurrentPath = (row: number, col: number): boolean => {
+    if (!currentCell || !startCell || !isDragging) return false
     
-    const deltaRow = hoverCell.row - startCell.row
-    const deltaCol = hoverCell.col - startCell.col
+    const deltaRow = currentCell.row - startCell.row
+    const deltaCol = currentCell.col - startCell.col
     
-    // Only show hover path for valid directions (horizontal, vertical, diagonal)
+    // Only show path for valid directions (horizontal, vertical, diagonal)
     if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
       const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
-      const stepRow = steps === 0 ? 0 : deltaRow / steps
-      const stepCol = steps === 0 ? 0 : deltaCol / steps
+      if (steps === 0) return row === startCell.row && col === startCell.col
+      
+      const stepRow = deltaRow / steps
+      const stepCol = deltaCol / steps
       
       for (let i = 0; i <= steps; i++) {
         const checkRow = startCell.row + i * stepRow
         const checkCol = startCell.col + i * stepCol
         if (checkRow === row && checkCol === col) {
-          return { isInPath: true, stepIndex: i, totalSteps: steps }
+          return true
         }
       }
     }
     
-    return { isInPath: false, stepIndex: 0, totalSteps: 0 }
+    return false
   }
 
   const getCellStyle = (row: number, col: number) => {
     const isSelected = isCellSelected(row, col)
-    const pathInfo = isCellInHoverPath(row, col)
-    const isInHoverPath = pathInfo.isInPath
+    const isInCurrentPath = isCellInCurrentPath(row, col)
     const isStartCell = startCell && startCell.row === row && startCell.col === col
-    const isEndCell = selectionEnd && selectionEnd.row === row && selectionEnd.col === col
+    const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
     const isDraggingStart = isDragging && isStartCell
-    const isDraggingEnd = isDragging && hoverCell && hoverCell.row === row && hoverCell.col === col
-    
-    // Check if current selection direction is valid
-    const isValidDirection = startCell && hoverCell ? 
-      (() => {
-        const deltaRow = hoverCell.row - startCell.row
-        const deltaCol = hoverCell.col - startCell.col
-        return deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
-      })() : false
+    const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
     
     const baseStyle = {
       width: '40px',
@@ -286,7 +204,7 @@ export const WordSearchPage = () => {
       fontSize: '16px',
       fontWeight: 'bold',
       transition: 'all 0.1s ease',
-      touchAction: 'none', // Prevent default touch behaviors
+      touchAction: 'none',
       position: 'relative' as const,
       zIndex: 1,
       margin: '2px',
@@ -301,14 +219,14 @@ export const WordSearchPage = () => {
         color: 'white',
         border: '3px solid #0d47a1',
         borderRadius: '10px',
-        boxShadow: '0 0 10px rgba(21, 101, 192, 0.5), inset 0 0 10px rgba(13, 71, 161, 0.3)',
+        boxShadow: '0 0 10px rgba(21, 101, 192, 0.5)',
         transform: 'scale(1.1)',
         zIndex: 10
       }
     }
 
-    // Special styling for end cell during dragging - only if direction is valid
-    if (isDraggingEnd && !isStartCell && isValidDirection) {
+    // Special styling for current cell during dragging
+    if (isDraggingCurrent) {
       return {
         ...baseStyle,
         backgroundColor: '#1976d2',
@@ -317,35 +235,30 @@ export const WordSearchPage = () => {
         borderRadius: '10px',
         boxShadow: '0 0 8px rgba(25, 118, 210, 0.4)',
         transform: 'scale(1.05)',
-        zIndex: 9 // Appear above path since direction is valid
+        zIndex: 9
       }
     }
 
     if (isSelected) {
       return {
         ...baseStyle,
-        backgroundColor: isStartCell ? '#1976d2' : isEndCell ? '#1565c0' : '#2196f3',
+        backgroundColor: '#2196f3',
         color: 'white',
         border: '2px solid #1976d2',
         borderRadius: '9px',
-        zIndex: 6 // Ensure selected cells appear above the yellow path indicator
+        zIndex: 6
       }
     }
 
-    if (isInHoverPath) {
-      // Create gradient effect along the path
-      const progress = pathInfo.stepIndex / Math.max(pathInfo.totalSteps, 1)
-      const opacity = 0.3 + (0.4 * (1 - progress)) // Fade from start to end
-      
+    if (isInCurrentPath) {
       return {
         ...baseStyle,
-        backgroundColor: `rgba(33, 150, 243, ${opacity})`,
+        backgroundColor: 'rgba(33, 150, 243, 0.4)',
         color: '#1976d2',
         border: '2px solid #2196f3',
         borderRadius: '9px',
-        boxShadow: `0 0 ${5 + (5 * (1 - progress))}px rgba(33, 150, 243, ${opacity})`,
-        transform: `scale(${1 + (0.05 * (1 - progress))})`,
-        zIndex: 8 // Ensure hover path cells appear above the yellow path indicator
+        boxShadow: '0 0 5px rgba(33, 150, 243, 0.4)',
+        zIndex: 8
       }
     }
 
@@ -358,65 +271,31 @@ export const WordSearchPage = () => {
     }
   }
 
-  // Function to render selection line overlay
+  // Simplified selection line rendering
   const renderSelectionLine = () => {
-    if (!isDragging || !startCell || !gridRef.current) return null
+    if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
     
-    // Calculate SVG coordinates (accounting for cell spacing)
     const cellSize = 40
-    const cellMargin = 4 // 2px margin on each side
+    const cellMargin = 4
     const cellWithMargin = cellSize + cellMargin
     const gridPadding = 16
     const borderWidth = 2
     
     const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
     const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
     
-    let endX: number, endY: number
-    let isValidDirection = false
+    // Check if direction is valid
+    const deltaRow = currentCell.row - startCell.row
+    const deltaCol = currentCell.col - startCell.col
+    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
     
-    if (hoverCell) {
-      // Mouse is close to a cell center - use cell coordinates
-      endX = hoverCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-      endY = hoverCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-      
-      // Calculate direction validity
-      const deltaRow = hoverCell.row - startCell.row
-      const deltaCol = hoverCell.col - startCell.col
-      isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
-    } else if (mousePosition) {
-      // Mouse is between cells - use actual mouse position
-      endX = mousePosition.x
-      endY = mousePosition.y
-      
-      // Calculate direction validity based on mouse position
-      const deltaX = endX - startX
-      const deltaY = endY - startY
-      const angle = Math.atan2(deltaY, deltaX)
-      const angleDegrees = (angle * 180 / Math.PI + 360) % 360
-      
-      // Check if angle is close to valid directions (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°)
-      const validAngles = [0, 45, 90, 135, 180, 225, 270, 315]
-      const tolerance = 15 // degrees
-      isValidDirection = validAngles.some(validAngle => 
-        Math.abs(angleDegrees - validAngle) <= tolerance ||
-        Math.abs(angleDegrees - validAngle - 360) <= tolerance ||
-        Math.abs(angleDegrees - validAngle + 360) <= tolerance
-      )
-    } else {
-      return null
-    }
-    
-    // Calculate grid dimensions
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
     const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const pathWidth = cellSize * 1.05
     
-    // Calculate path width (about cell width)
-    const pathWidth = cellSize * 1.05 // 105% of cell width for better appearance
-    
-    // Style based on direction validity - using more pure yellow colors
     const validColor = isValidDirection ? "rgba(230, 220, 15, 0.5)" : "rgba(220, 190, 30, 0.5)"
-    const validBorderColor = isValidDirection ? "rgba(230, 220, 15, 0.8)" : "rgba(220, 190, 30, 0.8)"
     
     return (
       <Box
@@ -440,19 +319,6 @@ export const WordSearchPage = () => {
             pointerEvents: 'none'
           }}
         >
-          {/* Border for the rounded path */}
-          <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
-            stroke={validBorderColor}
-            strokeWidth={pathWidth + 4}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.4"
-          />
-          {/* Wide semi-transparent path with rounded edges */}
           <line
             x1={startX}
             y1={startY}
@@ -537,18 +403,9 @@ export const WordSearchPage = () => {
                   border: '2px solid #ccc',
                   borderRadius: 1,
                   backgroundColor: '#f9f9f9',
-                  touchAction: 'none', // Prevent default touch behaviors
+                  touchAction: 'none',
                   position: 'relative',
-                  overflow: 'visible' // Allow SVG to render outside bounds if needed
-                }}
-                onMouseLeave={() => {
-                  setHoverCell(null)
-                  setMousePosition(null)
-                  if (isDragging) {
-                    setIsDragging(false)
-                    setStartCell(null)
-                    dispatch(clearSelection())
-                  }
+                  overflow: 'visible'
                 }}
                 onMouseMove={handleMouseMove}
                 onTouchMove={handleTouchMove}
@@ -561,8 +418,6 @@ export const WordSearchPage = () => {
                         data-cell={`${rowIndex}-${colIndex}`}
                         sx={getCellStyle(rowIndex, colIndex)}
                         onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                        onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                        onMouseLeave={handleMouseLeave}
                         onMouseUp={handleMouseUp}
                         onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
                         onTouchEnd={handleTouchEnd}
@@ -573,7 +428,6 @@ export const WordSearchPage = () => {
                     ))}
                   </Box>
                 ))}
-                {/* Render the selection line overlay */}
                 {renderSelectionLine()}
               </Box>
 
