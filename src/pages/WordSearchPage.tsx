@@ -17,10 +17,25 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Fab,
+  Drawer,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material'
-import { Refresh, EmojiEvents, Search } from '@mui/icons-material'
+import { 
+  Refresh, 
+  EmojiEvents, 
+  Search, 
+  ArrowBack,
+  List as ListIcon,
+  Close as CloseIcon
+} from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
+import { useNavigate } from 'react-router-dom'
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
@@ -28,7 +43,18 @@ export const WordSearchPage = () => {
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
+  const [wordBankOpen, setWordBankOpen] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
+  
+  // Mobile detection
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  
+  // Navigation
+  const navigate = useNavigate()
+  const handleBack = () => {
+    navigate('/')
+  }
 
   useEffect(() => {
     // Start a new game when component mounts
@@ -429,6 +455,202 @@ export const WordSearchPage = () => {
     }
   }
 
+  // Mobile full-screen layout
+  if (isMobile) {
+    return (
+      <Box sx={{ 
+        height: '100vh', 
+        width: '100vw', 
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#f5f5f5'
+      }}>
+        {/* Mobile Header */}
+        <AppBar position="fixed" sx={{ zIndex: 1100 }}>
+          <Toolbar variant="dense">
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleBack}
+            >
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
+              Word Search
+            </Typography>
+            <Chip 
+              label={`${foundWords.length}/${words.length}`}
+              size="small"
+              sx={{ 
+                mr: 1,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                fontSize: '0.75rem'
+              }}
+            />
+            <FormControl size="small" sx={{ minWidth: 80, mr: 1 }}>
+              <Select
+                value={difficulty}
+                onChange={handleDifficultyChange}
+                variant="outlined"
+                sx={{ 
+                  color: 'white',
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+                  '& .MuiSvgIcon-root': { color: 'white' }
+                }}
+              >
+                <MenuItem value="easy">Easy</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="hard">Hard</MenuItem>
+              </Select>
+            </FormControl>
+            <IconButton color="inherit" onClick={handleNewGame}>
+              <Refresh />
+            </IconButton>
+          </Toolbar>
+        </AppBar>
+
+        {/* Game Grid Container */}
+        <Box sx={{ 
+          pt: '48px', // Account for header height
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden'
+        }}>
+          <Box 
+            ref={gridRef}
+            sx={{ 
+              display: 'inline-block', 
+              p: 1, 
+              border: '2px solid #ccc',
+              borderRadius: 1,
+              backgroundColor: '#f9f9f9',
+              touchAction: 'none',
+              position: 'relative',
+              overflow: 'visible'
+            }}
+            onMouseMove={handleMouseMove}
+            onTouchMove={handleTouchMove}
+          >
+            {grid.map((row: string[], rowIndex: number) => (
+              <Box key={rowIndex} sx={{ display: 'flex' }}>
+                {row.map((cell: string, colIndex: number) => (
+                  <Box
+                    key={`${rowIndex}-${colIndex}`}
+                    data-cell={`${rowIndex}-${colIndex}`}
+                    sx={getCellStyle(rowIndex, colIndex)}
+                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                    onMouseUp={handleMouseUp}
+                    onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={() => handleCellClick(rowIndex, colIndex)}
+                  >
+                    {cell}
+                  </Box>
+                ))}
+              </Box>
+            ))}
+            {renderFoundWordLines()}
+            {renderSelectionLine()}
+          </Box>
+        </Box>
+
+        {/* Word Bank Floating Action Button */}
+        <Fab
+          color="primary"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000
+          }}
+          onClick={() => setWordBankOpen(true)}
+        >
+          <ListIcon />
+        </Fab>
+
+        {/* Word Bank Drawer */}
+        <Drawer
+          anchor="right"
+          open={wordBankOpen}
+          onClose={() => setWordBankOpen(false)}
+          sx={{
+            zIndex: 1200,
+            '& .MuiDrawer-paper': {
+              width: '280px',
+              maxWidth: '80vw'
+            }
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="h6">
+                Find These Words
+              </Typography>
+              <IconButton onClick={() => setWordBankOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Progress: {foundWords.length} / {words.length} words found
+            </Typography>
+
+            {gameWon && (
+              <Chip 
+                icon={<EmojiEvents />} 
+                label="All words found!" 
+                color="success" 
+                size="medium"
+                sx={{ mb: 2, width: '100%' }}
+              />
+            )}
+
+            <List dense>
+              {words.map((word: string, index: number) => (
+                <ListItem key={index} disablePadding>
+                  <Paper 
+                    elevation={1} 
+                    sx={{ 
+                      width: '100%', 
+                      p: 1, 
+                      mb: 1,
+                      backgroundColor: foundWords.includes(word) ? '#e8f5e8' : 'white'
+                    }}
+                  >
+                    <ListItemText 
+                      primary={word}
+                      primaryTypographyProps={{ style: getWordItemStyle(word) }}
+                    />
+                  </Paper>
+                </ListItem>
+              ))}
+            </List>
+
+            {gameWon && (
+              <Button
+                variant="contained"
+                color="success"
+                fullWidth
+                onClick={() => {
+                  handleNewGame()
+                  setWordBankOpen(false)
+                }}
+                startIcon={<Refresh />}
+                sx={{ mt: 2 }}
+              >
+                Play Again
+              </Button>
+            )}
+          </Box>
+        </Drawer>
+      </Box>
+    )
+  }
+
+  // Desktop layout
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
       <Typography variant="h3" component="h1" gutterBottom>
@@ -447,6 +669,12 @@ export const WordSearchPage = () => {
                   Game Grid
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Chip 
+                    label={`${foundWords.length}/${words.length} words`}
+                    color="primary"
+                    variant="outlined"
+                    size="small"
+                  />
                   <FormControl size="small" sx={{ minWidth: 120 }}>
                     <InputLabel>Difficulty</InputLabel>
                     <Select
