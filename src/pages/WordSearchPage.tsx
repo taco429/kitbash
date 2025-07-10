@@ -329,10 +329,11 @@ export const WordSearchPage = () => {
             const firstCell = wordPosition.cells[0]
             const lastCell = wordPosition.cells[wordPosition.cells.length - 1]
             
-            const startX = firstCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-            const startY = firstCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-            const endX = lastCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-            const endY = lastCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+            // Simplified coordinate calculation - cell center is at col/row * cellWithMargin + cellSize/2 + offset
+            const startX = firstCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const startY = firstCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const endX = lastCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+            const endY = lastCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
             
             return (
               <line
@@ -364,10 +365,11 @@ export const WordSearchPage = () => {
     const gridPadding = 16
     const borderWidth = 2
     
-    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
-    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth + cellMargin / 2
+    // Use the same coordinate calculation as found word lines for consistency
+    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
     
     // Check if direction is valid
     const deltaRow = currentCell.row - startCell.row
