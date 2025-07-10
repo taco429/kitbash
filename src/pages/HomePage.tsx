@@ -21,7 +21,7 @@ export const HomePage = () => {
       </Typography>
       
       <Typography variant="h6" color="text.secondary" paragraph>
-        A fun web project where I experiment with different ideas and build interactive demos. 
+        A simple web project where I experiment with different ideas and build interactive demos. 
         Feel free to explore and play around!
       </Typography>
 
