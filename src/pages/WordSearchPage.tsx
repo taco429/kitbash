@@ -23,7 +23,7 @@ import {
   Fab,
   Drawer,
   useTheme,
-  useMediaQuery,
+  useMediaQuery
 } from '@mui/material'
 import { 
   Refresh, 
@@ -34,12 +34,15 @@ import {
   Close as CloseIcon,
   PlayArrow
 } from '@mui/icons-material'
+import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
-import { useNavigate } from 'react-router-dom'
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { grid, words, foundWords, foundWordPositions, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
@@ -52,12 +55,6 @@ export const WordSearchPage = () => {
   const gridRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   
-  // Mobile detection
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  
-  // Navigation
-  const navigate = useNavigate()
   const handleBack = () => {
     navigate('/')
   }
@@ -122,6 +119,21 @@ export const WordSearchPage = () => {
       timerRef.current = null
     }
   }, [grid]) // Reset when grid changes (new game)
+
+  // Prevent body scrolling on mobile word search
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.height = '100vh'
+      document.body.style.touchAction = 'none'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.height = ''
+        document.body.style.touchAction = ''
+      }
+    }
+  }, [isMobile])
 
   // Global event handlers to end selection when drag ends outside grid
   useEffect(() => {
@@ -286,9 +298,12 @@ export const WordSearchPage = () => {
     const isDraggingStart = isDragging && isStartCell
     const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
     
+    const cellSize = isMobile ? '8vw' : '40px'
+    const fontSize = isMobile ? '4vw' : '16px'
+    
     const baseStyle = {
-      width: '40px',
-      height: '40px',
+      width: cellSize,
+      height: cellSize,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -296,13 +311,13 @@ export const WordSearchPage = () => {
       borderRadius: '8px',
       cursor: 'pointer',
       userSelect: 'none' as const,
-      fontSize: '16px',
+      fontSize: fontSize,
       fontWeight: 'bold',
       transition: 'all 0.1s ease',
       touchAction: 'none',
       position: 'relative' as const,
       zIndex: 1,
-      margin: '2px',
+      margin: isMobile ? '1px' : '2px',
       boxSizing: 'border-box' as const
     }
 
@@ -381,10 +396,10 @@ export const WordSearchPage = () => {
   const renderFoundWordLines = () => {
     if (!gridRef.current || foundWordPositions.length === 0) return null
     
-    const cellSize = 40
-    const cellMargin = 4
+    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
+    const cellMargin = isMobile ? 2 : 4
     const cellWithMargin = cellSize + cellMargin
-    const gridPadding = 16
+    const gridPadding = isMobile ? 8 : 16
     const borderWidth = 2
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
     const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
@@ -447,10 +462,10 @@ export const WordSearchPage = () => {
   const renderSelectionLine = () => {
     if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
     
-    const cellSize = 40
-    const cellMargin = 4
+    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
+    const cellMargin = isMobile ? 2 : 4
     const cellWithMargin = cellSize + cellMargin
-    const gridPadding = 16
+    const gridPadding = isMobile ? 8 : 16
     const borderWidth = 2
     
     // Use the same coordinate calculation as found word lines for consistency
@@ -843,13 +858,13 @@ export const WordSearchPage = () => {
                         onClick={() => handleCellClick(rowIndex, colIndex)}
                       >
                         {cell}
-                                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
                 ))}
+                {renderFoundWordLines()}
+                {renderSelectionLine()}
               </Box>
-            ))}
-            {renderFoundWordLines()}
-            {renderSelectionLine()}
-          </Box>
 
               {/* Play Button Overlay */}
               {!gameStarted && (
