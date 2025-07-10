@@ -31,7 +31,8 @@ import {
   Search, 
   ArrowBack,
   List as ListIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  PlayArrow
 } from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
@@ -44,7 +45,12 @@ export const WordSearchPage = () => {
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
   const [wordBankOpen, setWordBankOpen] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
+  const [minutes, setMinutes] = useState(0)
+  const [seconds, setSeconds] = useState(0)
+  const [milliseconds, setMilliseconds] = useState(0)
   const gridRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
   
   // Mobile detection
   const theme = useTheme()
@@ -56,10 +62,66 @@ export const WordSearchPage = () => {
     navigate('/')
   }
 
+  const handleStartGame = () => {
+    setGameStarted(true)
+  }
+
+  const formatTimer = () => {
+    const min = minutes.toString().padStart(2, '0')
+    const sec = seconds.toString().padStart(2, '0')
+    const ms = Math.floor(milliseconds / 10).toString().padStart(2, '0')
+    return `${min}:${sec}:${ms}`
+  }
+
   useEffect(() => {
     // Start a new game when component mounts
     dispatch(newGame({ difficulty: 'easy' }))
   }, [dispatch])
+
+  // Timer logic
+  useEffect(() => {
+    if (gameStarted && !gameWon) {
+      timerRef.current = setInterval(() => {
+        setMilliseconds(prev => {
+          if (prev >= 990) {
+            setSeconds(prevSec => {
+              if (prevSec >= 59) {
+                setMinutes(prevMin => prevMin + 1)
+                return 0
+              }
+              return prevSec + 1
+            })
+            return 0
+          }
+          return prev + 10
+        })
+      }, 10)
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [gameStarted, gameWon])
+
+  // Reset timer when starting a new game
+  useEffect(() => {
+    setGameStarted(false)
+    setMinutes(0)
+    setSeconds(0)
+    setMilliseconds(0)
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [grid]) // Reset when grid changes (new game)
 
   // Global event handlers to end selection when drag ends outside grid
   useEffect(() => {
@@ -510,6 +572,13 @@ export const WordSearchPage = () => {
           justifyContent: 'center',
           overflow: 'hidden'
         }}>
+          {/* Timer */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h5" fontFamily="monospace">
+              {formatTimer()}
+            </Typography>
+          </Box>
+
           <Box 
             ref={gridRef}
             sx={{ 
@@ -520,7 +589,9 @@ export const WordSearchPage = () => {
               backgroundColor: '#f9f9f9',
               touchAction: 'none',
               position: 'relative',
-              overflow: 'visible'
+              overflow: 'visible',
+              filter: !gameStarted ? 'blur(5px)' : 'none',
+              pointerEvents: !gameStarted ? 'none' : 'auto'
             }}
             onMouseMove={handleMouseMove}
             onTouchMove={handleTouchMove}
@@ -546,6 +617,37 @@ export const WordSearchPage = () => {
             {renderFoundWordLines()}
             {renderSelectionLine()}
           </Box>
+          
+          {/* Play Button Overlay */}
+          {!gameStarted && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10,
+                cursor: 'pointer'
+              }}
+              onClick={handleStartGame}
+              onTouchStart={handleStartGame}
+            >
+              <IconButton
+                size="large"
+                sx={{
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  width: 60,
+                  height: 60,
+                  '&:hover': {
+                    backgroundColor: 'primary.dark'
+                  }
+                }}
+              >
+                <PlayArrow sx={{ fontSize: 36 }} />
+              </IconButton>
+            </Box>
+          )}
           
           {/* Word Counter */}
           <Box sx={{ mt: 2 }}>
@@ -692,6 +794,13 @@ export const WordSearchPage = () => {
                 </Box>
               </Box>
 
+              {/* Timer */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Typography variant="h4" fontFamily="monospace">
+                  {formatTimer()}
+                </Typography>
+              </Box>
+
               {gameWon && (
                 <Box sx={{ mb: 2 }}>
                   <Chip 
@@ -713,7 +822,9 @@ export const WordSearchPage = () => {
                   backgroundColor: '#f9f9f9',
                   touchAction: 'none',
                   position: 'relative',
-                  overflow: 'visible'
+                  overflow: 'visible',
+                  filter: !gameStarted ? 'blur(5px)' : 'none',
+                  pointerEvents: !gameStarted ? 'none' : 'auto'
                 }}
                 onMouseMove={handleMouseMove}
                 onTouchMove={handleTouchMove}
@@ -739,6 +850,36 @@ export const WordSearchPage = () => {
             {renderFoundWordLines()}
             {renderSelectionLine()}
           </Box>
+
+              {/* Play Button Overlay */}
+              {!gameStarted && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 10,
+                    cursor: 'pointer'
+                  }}
+                  onClick={handleStartGame}
+                >
+                  <IconButton
+                    size="large"
+                    sx={{
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      width: 80,
+                      height: 80,
+                      '&:hover': {
+                        backgroundColor: 'primary.dark'
+                      }
+                    }}
+                  >
+                    <PlayArrow sx={{ fontSize: 48 }} />
+                  </IconButton>
+                </Box>
+              )}
 
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
                 <Chip 
