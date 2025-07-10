@@ -25,7 +25,7 @@ import { newGame, startSelection, updateSelection, endSelection, clearSelection 
 
 export const WordSearchPage = () => {
   const dispatch = useAppDispatch()
-  const { grid, words, foundWords, gameWon, difficulty, selectionEnd } = useAppSelector((state: any) => state.wordSearch)
+  const { grid, words, foundWords, selectedCells, gameWon, difficulty, selectionEnd } = useAppSelector((state: any) => state.wordSearch)
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null)
