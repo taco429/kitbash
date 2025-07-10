@@ -54,6 +54,10 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Check if we're on the word search page and on mobile for full-screen mode
+  const isWordSearchPage = location.pathname === '/word-search'
+  const showFullScreen = isWordSearchPage && isMobile
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
@@ -63,6 +67,15 @@ export const Layout = ({ children }: LayoutProps) => {
     if (isMobile) {
       setMobileOpen(false)
     }
+  }
+
+  // If word search on mobile, render full-screen without layout chrome
+  if (showFullScreen) {
+    return (
+      <Box sx={{ height: '100vh', overflow: 'hidden' }}>
+        {children}
+      </Box>
+    )
   }
 
   const drawer = (
