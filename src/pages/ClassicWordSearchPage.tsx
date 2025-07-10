@@ -343,11 +343,11 @@ export const ClassicWordSearchPage = () => {
     if (isDraggingStart) {
       return {
         ...baseStyle,
-        backgroundColor: '#1565c0',
-        color: 'white',
-        border: '3px solid #0d47a1',
+        backgroundColor: '#ffc107',
+        color: '#f57f17',
+        border: '3px solid #ff8f00',
         borderRadius: '10px',
-        boxShadow: '0 0 10px rgba(21, 101, 192, 0.5)',
+        boxShadow: '0 0 10px rgba(255, 193, 7, 0.5)',
         transform: 'scale(1.1)',
         zIndex: 10
       }
@@ -357,11 +357,11 @@ export const ClassicWordSearchPage = () => {
     if (isDraggingCurrent) {
       return {
         ...baseStyle,
-        backgroundColor: '#1976d2',
-        color: 'white',
-        border: '3px solid #1565c0',
+        backgroundColor: '#ffeb3b',
+        color: '#f57f17',
+        border: '3px solid #ffc107',
         borderRadius: '10px',
-        boxShadow: '0 0 8px rgba(25, 118, 210, 0.4)',
+        boxShadow: '0 0 8px rgba(255, 235, 59, 0.4)',
         transform: 'scale(1.05)',
         zIndex: 9
       }
@@ -370,9 +370,9 @@ export const ClassicWordSearchPage = () => {
     if (isSelected) {
       return {
         ...baseStyle,
-        backgroundColor: '#2196f3',
-        color: 'white',
-        border: '2px solid #1976d2',
+        backgroundColor: '#ffeb3b',
+        color: '#f57f17',
+        border: '2px solid #ffc107',
         borderRadius: '9px',
         zIndex: 6
       }
@@ -381,11 +381,11 @@ export const ClassicWordSearchPage = () => {
     if (isInCurrentPath) {
       return {
         ...baseStyle,
-        backgroundColor: 'rgba(33, 150, 243, 0.4)',
-        color: '#1976d2',
-        border: '2px solid #2196f3',
+        backgroundColor: 'rgba(255, 235, 59, 0.4)',
+        color: '#f57f17',
+        border: '2px solid #ffeb3b',
         borderRadius: '9px',
-        boxShadow: '0 0 5px rgba(33, 150, 243, 0.4)',
+        boxShadow: '0 0 5px rgba(255, 235, 59, 0.4)',
         zIndex: 8
       }
     }
@@ -499,8 +499,9 @@ export const ClassicWordSearchPage = () => {
     
     const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
     const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const pathWidth = cellSize * 1.05
     
-    if (!isValidDirection) return null
+    const validColor = isValidDirection ? "rgba(230, 220, 15, 0.5)" : "rgba(220, 190, 30, 0.5)"
     
     return (
       <Box
@@ -529,8 +530,8 @@ export const ClassicWordSearchPage = () => {
             y1={startY}
             x2={endX}
             y2={endY}
-            stroke="#1976d2"
-            strokeWidth={4}
+            stroke={validColor}
+            strokeWidth={pathWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
             opacity="0.8"
