@@ -156,6 +156,7 @@ export const OneWordRushPage = () => {
     if (result.position) {
       setGrid(result.grid)
       setTimeLeft(30) // Reset timer for new word
+      setFoundWordPositions([]) // Clear highlighting from previous word
     } else {
       // Fallback if word placement fails
       generateNewPuzzle()
