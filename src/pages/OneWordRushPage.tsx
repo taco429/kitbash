@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { 
   Card, 
   CardContent, 
@@ -79,7 +79,12 @@ export const OneWordRushPage = () => {
 
   const getRandomWords = useCallback(() => {
     const allWords = [...easyWords, ...mediumWords, ...hardWords]
-    const shuffled = allWords.sort(() => Math.random() - 0.5)
+    // Use Fisher-Yates shuffle for better randomization
+    const shuffled = [...allWords]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
     return shuffled.slice(0, 10) // Get 10 random words for the game
   }, [])
 
@@ -141,13 +146,15 @@ export const OneWordRushPage = () => {
     return { grid: newGrid, position: null }
   }, [])
 
-  const generateNewPuzzle = useCallback(() => {
-    if (currentWordIndex >= wordQueue.length) {
+  const generateNewPuzzle = useCallback((nextWordIndex?: number) => {
+    const wordIndex = nextWordIndex !== undefined ? nextWordIndex : currentWordIndex
+    
+    if (wordIndex >= wordQueue.length) {
       setGameOver(true)
       return
     }
     
-    const word = wordQueue[currentWordIndex]
+    const word = wordQueue[wordIndex]
     setCurrentWord(word)
     
     let newGrid = generateRandomGrid(10)
@@ -159,7 +166,7 @@ export const OneWordRushPage = () => {
       setFoundWordPositions([]) // Clear highlighting from previous word
     } else {
       // Fallback if word placement fails
-      generateNewPuzzle()
+      generateNewPuzzle(wordIndex)
     }
   }, [currentWordIndex, wordQueue, generateRandomGrid, placeWordInGrid])
 
@@ -247,11 +254,12 @@ export const OneWordRushPage = () => {
       setCurrentCell(null)
       
       // Move to next word
-      setCurrentWordIndex(prev => prev + 1)
+      const nextWordIndex = currentWordIndex + 1
+      setCurrentWordIndex(nextWordIndex)
       
       // Generate new puzzle after a short delay
       setTimeout(() => {
-        generateNewPuzzle()
+        generateNewPuzzle(nextWordIndex)
       }, 500)
       
       return true
@@ -348,7 +356,7 @@ export const OneWordRushPage = () => {
     handleSelectionStart(row, col)
   }
 
-  const handleMouseMove = (event: any) => {
+  const handleMouseMove = (event: React.MouseEvent) => {
     handleSelectionMove(event.clientX, event.clientY)
   }
 
@@ -357,12 +365,12 @@ export const OneWordRushPage = () => {
   }
 
   // Touch handlers
-  const handleTouchStart = (event: any, row: number, col: number) => {
+  const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
     event.preventDefault()
     handleSelectionStart(row, col)
   }
 
-  const handleTouchMove = (event: any) => {
+  const handleTouchMove = (event: React.TouchEvent) => {
     event.preventDefault()
     if (event.touches.length > 0) {
       const touch = event.touches[0]
@@ -370,7 +378,7 @@ export const OneWordRushPage = () => {
     }
   }
 
-  const handleTouchEnd = (event: any) => {
+  const handleTouchEnd = (event: React.TouchEvent) => {
     event.preventDefault()
     handleSelectionEnd()
   }
@@ -649,8 +657,8 @@ export const OneWordRushPage = () => {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              {grid.map((row, rowIndex) =>
-                row.map((letter, colIndex) => (
+              {grid.map((row: string[], rowIndex: number) =>
+                row.map((letter: string, colIndex: number) => (
                   <Box
                     key={`${rowIndex}-${colIndex}`}
                     data-cell={`${rowIndex}-${colIndex}`}
