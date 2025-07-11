@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useCallback, useRef, useReducer } from 'react'
 import { 
   Card, 
   CardContent, 
@@ -37,38 +37,227 @@ interface WordPosition {
   cells: Array<{ row: number; col: number }>
 }
 
+// Game state types
+interface GameState {
+  // Game status
+  phase: 'idle' | 'playing' | 'transitioning' | 'gameOver' | 'showingWordLocation'
+  gameWon: boolean
+  
+  // Game data
+  grid: string[][]
+  currentWord: string
+  wordQueue: string[]
+  currentWordIndex: number
+  
+  // Score and stats
+  score: number
+  wordsFound: number
+  combo: number
+  maxCombo: number
+  timeLeft: number
+  
+  // UI state
+  foundWordPositions: WordPosition[]
+  selectedCells: Array<{ row: number; col: number }>
+  
+  // Word location flash effect
+  wordLocationCells: Array<{ row: number; col: number }>
+  flashPhase: number
+  
+  // Selection state
+  isDragging: boolean
+  startCell: { row: number; col: number } | null
+  currentCell: { row: number; col: number } | null
+}
+
+type GameAction =
+  | { type: 'START_GAME'; payload: { words: string[]; grid: string[][], currentWord: string } }
+  | { type: 'WORD_FOUND'; payload: { points: number; wordPosition: WordPosition } }
+  | { type: 'NEXT_WORD'; payload: { grid: string[][], word: string } }
+  | { type: 'GAME_COMPLETE' }
+  | { type: 'TIME_OUT' }
+  | { type: 'START_WORD_LOCATION_FLASH'; payload: { cells: Array<{ row: number; col: number }> } }
+  | { type: 'FLASH_STEP' }
+  | { type: 'FLASH_COMPLETE' }
+  | { type: 'TICK_TIMER' }
+  | { type: 'RESET_TIMER' }
+  | { type: 'START_SELECTION'; payload: { row: number; col: number } }
+  | { type: 'UPDATE_SELECTION'; payload: { cells: Array<{ row: number; col: number }>, currentCell: { row: number; col: number } } }
+  | { type: 'END_SELECTION' }
+  | { type: 'RESET_GAME' }
+
+const initialState: GameState = {
+  phase: 'idle',
+  gameWon: false,
+  grid: [],
+  currentWord: '',
+  wordQueue: [],
+  currentWordIndex: 0,
+  score: 0,
+  wordsFound: 0,
+  combo: 0,
+  maxCombo: 0,
+  timeLeft: 30,
+  foundWordPositions: [],
+  selectedCells: [],
+  wordLocationCells: [],
+  flashPhase: 0,
+  isDragging: false,
+  startCell: null,
+  currentCell: null
+}
+
+function gameReducer(state: GameState, action: GameAction): GameState {
+  switch (action.type) {
+    case 'START_GAME':
+      return {
+        ...initialState,
+        phase: 'playing',
+        wordQueue: action.payload.words,
+        currentWord: action.payload.currentWord,
+        grid: action.payload.grid,
+        currentWordIndex: 0,
+        timeLeft: 30
+      }
+    
+    case 'WORD_FOUND':
+      const newCombo = state.combo + 1
+      return {
+        ...state,
+        phase: 'transitioning',
+        score: state.score + action.payload.points,
+        wordsFound: state.wordsFound + 1,
+        combo: newCombo,
+        maxCombo: Math.max(state.maxCombo, newCombo),
+        foundWordPositions: [...state.foundWordPositions, action.payload.wordPosition],
+        selectedCells: [], // Clear selection immediately
+        isDragging: false,
+        startCell: null,
+        currentCell: null
+      }
+    
+    case 'NEXT_WORD':
+      const nextIndex = state.currentWordIndex + 1
+      if (nextIndex >= state.wordQueue.length) {
+        return {
+          ...state,
+          phase: 'gameOver',
+          gameWon: true
+        }
+      }
+      return {
+        ...state,
+        phase: 'playing',
+        currentWordIndex: nextIndex,
+        currentWord: action.payload.word,
+        grid: action.payload.grid,
+        timeLeft: 30,
+        foundWordPositions: [], // Clear previous word highlighting
+        selectedCells: [],
+        isDragging: false,
+        startCell: null,
+        currentCell: null
+      }
+    
+    case 'GAME_COMPLETE':
+      return {
+        ...state,
+        phase: 'gameOver',
+        gameWon: true
+      }
+    
+    case 'TIME_OUT':
+      return {
+        ...state,
+        phase: 'showingWordLocation',
+        flashPhase: 0
+      }
+    
+    case 'START_WORD_LOCATION_FLASH':
+      return {
+        ...state,
+        phase: 'showingWordLocation',
+        wordLocationCells: action.payload.cells,
+        flashPhase: 0
+      }
+    
+    case 'FLASH_STEP':
+      return {
+        ...state,
+        flashPhase: state.flashPhase + 1
+      }
+    
+    case 'FLASH_COMPLETE':
+      return {
+        ...state,
+        phase: 'gameOver',
+        gameWon: false,
+        wordLocationCells: [],
+        flashPhase: 0
+      }
+    
+    case 'TICK_TIMER':
+      const newTimeLeft = Math.max(0, state.timeLeft - 1)
+      return {
+        ...state,
+        timeLeft: newTimeLeft
+      }
+    
+    case 'RESET_TIMER':
+      return {
+        ...state,
+        timeLeft: 30
+      }
+    
+    case 'START_SELECTION':
+      if (state.phase !== 'playing') return state
+      return {
+        ...state,
+        isDragging: true,
+        startCell: { row: action.payload.row, col: action.payload.col },
+        currentCell: { row: action.payload.row, col: action.payload.col },
+        selectedCells: [{ row: action.payload.row, col: action.payload.col }]
+      }
+    
+    case 'UPDATE_SELECTION':
+      if (state.phase !== 'playing' || !state.isDragging) return state
+      return {
+        ...state,
+        currentCell: action.payload.currentCell,
+        selectedCells: action.payload.cells
+      }
+    
+    case 'END_SELECTION':
+      if (state.phase !== 'playing') return state
+      return {
+        ...state,
+        isDragging: false,
+        startCell: null,
+        currentCell: null,
+        selectedCells: [],
+        combo: 0 // Reset combo on failed selection
+      }
+    
+    case 'RESET_GAME':
+      return initialState
+    
+    default:
+      return state
+  }
+}
+
 export const OneWordRushPage = () => {
   const navigate = useNavigate()
   const isMobile = useMediaQuery(useTheme().breakpoints.down('md'))
   
-  // Game state
-  const [grid, setGrid] = useState<string[][]>([])
-  const [currentWord, setCurrentWord] = useState<string>('')
-  const [score, setScore] = useState(0)
-  const [timeLeft, setTimeLeft] = useState(30)
-  const [gameStarted, setGameStarted] = useState(false)
-  const [gameOver, setGameOver] = useState(false)
-  const [gameWon, setGameWon] = useState(false)
-  const [wordsFound, setWordsFound] = useState(0)
-  const [selectedCells, setSelectedCells] = useState<Array<{ row: number; col: number }>>([])
-  const [foundWordPositions, setFoundWordPositions] = useState<WordPosition[]>([])
-  const [wordQueue, setWordQueue] = useState<string[]>([])
-  const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [combo, setCombo] = useState(0)
-  const [maxCombo, setMaxCombo] = useState(0)
+  // Use reducer for atomic state management
+  const [gameState, dispatch] = useReducer(gameReducer, initialState)
   
-  // Flash effect state for showing word location when time runs out
-  const [showingWordLocation, setShowingWordLocation] = useState(false)
-  const [wordLocationCells, setWordLocationCells] = useState<Array<{ row: number; col: number }>>([])
-  const [flashPhase, setFlashPhase] = useState(0)
-  
-  // Selection state
-  const [isDragging, setIsDragging] = useState(false)
-  const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
-  const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
-  
-  const gridRef = useRef<HTMLDivElement>(null)
+  // Refs for cleanup
   const timerRef = useRef<number | null>(null)
+  const flashRef = useRef<number | null>(null)
+  const transitionRef = useRef<number | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
   
   // Word lists for different difficulties
   const easyWords = [
@@ -86,15 +275,15 @@ export const OneWordRushPage = () => {
     'ENTERTAINMENT', 'ORGANIZATION', 'RESPONSIBILITY', 'COMMUNICATION', 'INTERNATIONAL', 'ACHIEVEMENT'
   ]
 
+  // Utility functions
   const getRandomWords = useCallback(() => {
     const allWords = [...easyWords, ...mediumWords, ...hardWords]
-    // Use Fisher-Yates shuffle for better randomization
     const shuffled = [...allWords]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    return shuffled.slice(0, 10) // Get 10 random words for the game
+    return shuffled.slice(0, 10)
   }, [])
 
   const generateRandomGrid = useCallback((size: number = 10) => {
@@ -131,12 +320,10 @@ export const OneWordRushPage = () => {
       const startRow = Math.floor(Math.random() * newGrid.length)
       const startCol = Math.floor(Math.random() * newGrid[0].length)
       
-      // Check if word can fit in this direction
       const endRow = startRow + direction.row * (word.length - 1)
       const endCol = startCol + direction.col * (word.length - 1)
       
       if (endRow >= 0 && endRow < newGrid.length && endCol >= 0 && endCol < newGrid[0].length) {
-        // Place the word
         const wordCells: Array<{ row: number; col: number }> = []
         for (let i = 0; i < word.length; i++) {
           const row = startRow + direction.row * i
@@ -155,76 +342,6 @@ export const OneWordRushPage = () => {
     return { grid: newGrid, position: null }
   }, [])
 
-  const generateNewPuzzle = useCallback((nextWordIndex?: number) => {
-    const wordIndex = nextWordIndex !== undefined ? nextWordIndex : currentWordIndex
-    
-    if (wordIndex >= wordQueue.length) {
-      // Player completed all words - victory!
-      setGameWon(true)
-      setGameOver(true)
-      return
-    }
-    
-    const word = wordQueue[wordIndex]
-    setCurrentWord(word)
-    
-    let newGrid = generateRandomGrid(10)
-    const result = placeWordInGrid(newGrid, word)
-    
-    if (result.position) {
-      setGrid(result.grid)
-      setTimeLeft(30) // Reset timer for new word
-      setFoundWordPositions([]) // Clear highlighting from previous word
-      
-      // Clear any lingering selection state
-      setIsDragging(false)
-      setStartCell(null)
-      setCurrentCell(null)
-      setSelectedCells([])
-    } else {
-      // Fallback if word placement fails
-      generateNewPuzzle(wordIndex)
-    }
-  }, [currentWordIndex, wordQueue, generateRandomGrid, placeWordInGrid])
-
-  const startGame = useCallback(() => {
-    const words = getRandomWords()
-    setWordQueue(words)
-    setCurrentWordIndex(0)
-    setScore(0)
-    setWordsFound(0)
-    setCombo(0)
-    setMaxCombo(0)
-    setGameStarted(true)
-    setGameOver(false)
-    setGameWon(false)
-    setFoundWordPositions([])
-    
-    // Clear flash effect state
-    setShowingWordLocation(false)
-    setWordLocationCells([])
-    setFlashPhase(0)
-    
-    // Clear any lingering selection state
-    setIsDragging(false)
-    setStartCell(null)
-    setCurrentCell(null)
-    setSelectedCells([])
-    
-    // Generate first puzzle
-    const word = words[0]
-    setCurrentWord(word)
-    
-    let newGrid = generateRandomGrid(10)
-    const result = placeWordInGrid(newGrid, word)
-    
-    if (result.position) {
-      setGrid(result.grid)
-      setTimeLeft(30)
-    }
-  }, [getRandomWords, generateRandomGrid, placeWordInGrid])
-
-  // Function to find where the current word is located in the grid
   const findWordInGrid = useCallback((word: string, grid: string[][]): Array<{ row: number; col: number }> => {
     const directions = [
       { row: 0, col: 1 },   // horizontal
@@ -267,11 +384,142 @@ export const OneWordRushPage = () => {
     return []
   }, [])
 
-  // Timer logic with flash effect when time runs out
+  // Game control functions
+  const startGame = useCallback(() => {
+    // Clean up any existing timers
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (flashRef.current) clearInterval(flashRef.current)
+    if (transitionRef.current) clearTimeout(transitionRef.current)
+    
+    const words = getRandomWords()
+    const firstWord = words[0]
+    
+    let attempts = 0
+    let grid: string[][]
+    let success = false
+    
+    // Ensure grid generation succeeds
+    while (!success && attempts < 10) {
+      grid = generateRandomGrid(10)
+      const result = placeWordInGrid(grid, firstWord)
+      
+      if (result.position) {
+        dispatch({
+          type: 'START_GAME',
+          payload: {
+            words,
+            grid: result.grid,
+            currentWord: firstWord
+          }
+        })
+        success = true
+      }
+      attempts++
+    }
+    
+    // Fallback if grid generation fails
+    if (!success) {
+      console.error('Failed to generate initial grid')
+      // Create a simple grid with the word placed horizontally
+      grid = generateRandomGrid(10)
+      for (let i = 0; i < firstWord.length; i++) {
+        grid[0][i] = firstWord[i]
+      }
+      dispatch({
+        type: 'START_GAME',
+        payload: {
+          words,
+          grid,
+          currentWord: firstWord
+        }
+      })
+    }
+  }, [getRandomWords, generateRandomGrid, placeWordInGrid])
+
+  const checkWordFound = useCallback(() => {
+    if (gameState.selectedCells.length === 0 || gameState.phase !== 'playing') return false
+    
+    const selectedWord = gameState.selectedCells
+      .map(cell => gameState.grid[cell.row][cell.col])
+      .join('')
+    
+    const reversedWord = selectedWord.split('').reverse().join('')
+    
+    if (selectedWord === gameState.currentWord || reversedWord === gameState.currentWord) {
+      const timeBonus = Math.max(0, gameState.timeLeft) * 10
+      const comboBonus = gameState.combo * 50
+      const speedBonus = gameState.timeLeft > 20 ? 200 : gameState.timeLeft > 10 ? 100 : 50
+      const totalPoints = 100 + timeBonus + comboBonus + speedBonus
+      
+      const newFoundWord: WordPosition = {
+        word: gameState.currentWord,
+        cells: [...gameState.selectedCells]
+      }
+      
+      dispatch({
+        type: 'WORD_FOUND',
+        payload: {
+          points: totalPoints,
+          wordPosition: newFoundWord
+        }
+      })
+      
+      return true
+    }
+    
+    return false
+  }, [gameState.selectedCells, gameState.grid, gameState.currentWord, gameState.timeLeft, gameState.combo, gameState.phase])
+
+  const generateNextPuzzle = useCallback(() => {
+    const nextIndex = gameState.currentWordIndex + 1
+    
+    if (nextIndex >= gameState.wordQueue.length) {
+      dispatch({ type: 'GAME_COMPLETE' })
+      return
+    }
+    
+    const nextWord = gameState.wordQueue[nextIndex]
+    let attempts = 0
+    let success = false
+    
+    while (!success && attempts < 10) {
+      const newGrid = generateRandomGrid(10)
+      const result = placeWordInGrid(newGrid, nextWord)
+      
+      if (result.position) {
+        dispatch({
+          type: 'NEXT_WORD',
+          payload: {
+            grid: result.grid,
+            word: nextWord
+          }
+        })
+        success = true
+      }
+      attempts++
+    }
+    
+    // Fallback if grid generation fails
+    if (!success) {
+      const newGrid = generateRandomGrid(10)
+      for (let i = 0; i < nextWord.length; i++) {
+        newGrid[0][i] = nextWord[i]
+      }
+      dispatch({
+        type: 'NEXT_WORD',
+        payload: {
+          grid: newGrid,
+          word: nextWord
+        }
+      })
+    }
+  }, [gameState.currentWordIndex, gameState.wordQueue, generateRandomGrid, placeWordInGrid])
+
+  // Timer management
   useEffect(() => {
-    if (gameStarted && !gameOver && !showingWordLocation && timeLeft > 0) {
+    if (gameState.phase === 'playing' && gameState.timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
-        setTimeLeft((prev: number) => prev - 1)
+        dispatch({ type: 'TICK_TIMER' })
       }, 1000)
     } else {
       if (timerRef.current) {
@@ -279,12 +527,12 @@ export const OneWordRushPage = () => {
         timerRef.current = null
       }
       
-      if (gameStarted && timeLeft === 0 && !showingWordLocation) {
-        // Find the word location and start flash effect
-        const wordCells = findWordInGrid(currentWord, grid)
-        setWordLocationCells(wordCells)
-        setShowingWordLocation(true)
-        setFlashPhase(0)
+      if (gameState.phase === 'playing' && gameState.timeLeft === 0) {
+        const wordCells = findWordInGrid(gameState.currentWord, gameState.grid)
+        dispatch({
+          type: 'START_WORD_LOCATION_FLASH',
+          payload: { cells: wordCells }
+        })
       }
     }
     
@@ -294,77 +542,52 @@ export const OneWordRushPage = () => {
         timerRef.current = null
       }
     }
-  }, [gameStarted, gameOver, timeLeft, showingWordLocation, currentWord, grid, findWordInGrid])
+  }, [gameState.phase, gameState.timeLeft, gameState.currentWord, gameState.grid, findWordInGrid])
 
-  // Flash effect for showing word location
+  // Flash effect management
   useEffect(() => {
-    if (showingWordLocation) {
-      const flashInterval = setInterval(() => {
-        setFlashPhase(prev => {
-          if (prev >= 5) { // Flash 3 times (6 phases: 0,1,2,3,4,5)
-            // Flash complete, show game over (loss due to time out)
-            setShowingWordLocation(false)
-            setWordLocationCells([])
-            setGameWon(false) // Explicitly set to false for loss
-            setGameOver(true)
-            return 0
-          }
-          return prev + 1
-        })
-      }, 300) // Flash every 300ms
+    if (gameState.phase === 'showingWordLocation') {
+      flashRef.current = window.setInterval(() => {
+        if (gameState.flashPhase >= 5) {
+          dispatch({ type: 'FLASH_COMPLETE' })
+        } else {
+          dispatch({ type: 'FLASH_STEP' })
+        }
+      }, 300)
       
-      return () => clearInterval(flashInterval)
-    }
-  }, [showingWordLocation])
-
-  const checkWordFound = useCallback(() => {
-    if (selectedCells.length === 0) return false
-    
-    // Get the selected word
-    const selectedWord = selectedCells
-      .map(cell => grid[cell.row][cell.col])
-      .join('')
-    
-    const reversedWord = selectedWord.split('').reverse().join('')
-    
-    if (selectedWord === currentWord || reversedWord === currentWord) {
-      // Word found!
-      const timeBonus = Math.max(0, timeLeft) * 10
-      const comboBonus = combo * 50
-      const speedBonus = timeLeft > 20 ? 200 : timeLeft > 10 ? 100 : 50
-      const totalPoints = 100 + timeBonus + comboBonus + speedBonus
-      
-             setScore((prev: number) => prev + totalPoints)
-       setWordsFound((prev: number) => prev + 1)
-       setCombo((prev: number) => {
-         const newCombo = prev + 1
-         setMaxCombo(current => Math.max(current, newCombo))
-         return newCombo
-       })
-      
-      // Add to found words
-      const newFoundWord: WordPosition = {
-        word: currentWord,
-        cells: [...selectedCells]
+      return () => {
+        if (flashRef.current) {
+          clearInterval(flashRef.current)
+          flashRef.current = null
+        }
       }
-      setFoundWordPositions(prev => [...prev, newFoundWord])
-      
-      // Don't clear selection here - let handleSelectionEnd handle it
-      
-      // Move to next word
-      const nextWordIndex = currentWordIndex + 1
-      setCurrentWordIndex(nextWordIndex)
-      
-      // Generate new puzzle after a short delay
-      setTimeout(() => {
-        generateNewPuzzle(nextWordIndex)
+    }
+  }, [gameState.phase, gameState.flashPhase])
+
+  // Transition management
+  useEffect(() => {
+    if (gameState.phase === 'transitioning') {
+      transitionRef.current = window.setTimeout(() => {
+        generateNextPuzzle()
       }, 500)
       
-      return true
+      return () => {
+        if (transitionRef.current) {
+          clearTimeout(transitionRef.current)
+          transitionRef.current = null
+        }
+      }
     }
-    
-    return false
-  }, [selectedCells, grid, currentWord, timeLeft, combo, generateNewPuzzle])
+  }, [gameState.phase, generateNextPuzzle])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (flashRef.current) clearInterval(flashRef.current)
+      if (transitionRef.current) clearTimeout(transitionRef.current)
+    }
+  }, [])
 
   // Enhanced getCellFromCoordinates for smooth tracking (like Classic Word Search)
   const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
@@ -377,59 +600,47 @@ export const OneWordRushPage = () => {
       const cellData = element.getAttribute('data-cell')
       if (cellData) {
         const [row, col] = cellData.split('-').map(Number)
-        if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
+        if (row >= 0 && row < gameState.grid.length && col >= 0 && col < gameState.grid[0].length) {
           return { row, col }
         }
       }
     }
     
     return null
-  }, [grid])
+  }, [gameState.grid])
 
   const handleSelectionStart = (row: number, col: number) => {
-    setIsDragging(true)
-    setStartCell({ row, col })
-    setCurrentCell({ row, col })
-    setSelectedCells([{ row, col }])
+    dispatch({ type: 'START_SELECTION', payload: { row, col } })
   }
 
   const handleSelectionMove = (clientX: number, clientY: number) => {
-    if (!isDragging || !startCell) return
+    if (!gameState.isDragging || !gameState.startCell) return
 
     const cell = getCellFromCoordinates(clientX, clientY)
-    if (cell && (!currentCell || cell.row !== currentCell.row || cell.col !== currentCell.col)) {
-      setCurrentCell(cell)
-      
-      // Always update selectedCells based on current position
-      const deltaRow = cell.row - startCell.row
-      const deltaCol = cell.col - startCell.col
+    if (cell && (!gameState.currentCell || cell.row !== gameState.currentCell.row || cell.col !== gameState.currentCell.col)) {
+      const deltaRow = cell.row - gameState.startCell.row
+      const deltaCol = cell.col - gameState.startCell.col
       
       if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
         // Valid direction - calculate cells in line from start to current
-        const newSelectedCells = getLineCells(startCell, cell)
-        setSelectedCells(newSelectedCells)
+        const newSelectedCells = getLineCells(gameState.startCell, cell)
+        dispatch({ type: 'UPDATE_SELECTION', payload: { cells: newSelectedCells, currentCell: cell } })
       } else {
         // Invalid direction - only keep the start cell selected
-        setSelectedCells([startCell])
+        dispatch({ type: 'UPDATE_SELECTION', payload: { cells: [gameState.startCell], currentCell: cell } })
       }
     }
   }
 
   const handleSelectionEnd = () => {
-    if (isDragging) {
+    if (gameState.isDragging) {
       // Check if word is found BEFORE clearing state
       const wordFound = checkWordFound()
       
       if (!wordFound) {
         // Reset combo if word not found
-        setCombo(0)
+        dispatch({ type: 'END_SELECTION' })
       }
-      
-      // Always clean up state immediately - this prevents lingering highlights
-      setIsDragging(false)
-      setStartCell(null)
-      setCurrentCell(null)
-      setSelectedCells([])
     }
   }
 
@@ -468,7 +679,7 @@ export const OneWordRushPage = () => {
 
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (isDragging) {
+    if (gameState.isDragging) {
       handleSelectionMove(event.clientX, event.clientY)
     }
   }
@@ -485,7 +696,7 @@ export const OneWordRushPage = () => {
 
   const handleTouchMove = (event: React.TouchEvent) => {
     event.preventDefault()
-    if (isDragging && event.touches.length > 0) {
+    if (gameState.isDragging && event.touches.length > 0) {
       const touch = event.touches[0]
       handleSelectionMove(touch.clientX, touch.clientY)
     }
@@ -498,7 +709,7 @@ export const OneWordRushPage = () => {
 
   // Prevent body scrolling on mobile word search (only during game)
   useEffect(() => {
-    if (isMobile && gameStarted) {
+    if (isMobile && gameState.phase === 'playing') {
       document.body.style.overflow = 'hidden'
       document.body.style.height = '100vh'
       document.body.style.touchAction = 'none'
@@ -509,26 +720,20 @@ export const OneWordRushPage = () => {
         document.body.style.touchAction = ''
       }
     }
-  }, [isMobile, gameStarted])
+  }, [isMobile, gameState.phase])
 
   // Global event handlers - improved cleanup like Classic Word Search
   useEffect(() => {
     const handleGlobalEnd = () => {
-      if (isDragging) {
-        setIsDragging(false)
-        setStartCell(null)
-        setCurrentCell(null)
-        setSelectedCells([])
+      if (gameState.isDragging) {
+        dispatch({ type: 'END_SELECTION' })
       }
     }
 
     // Also listen for mouse leave events to clear selection
     const handleMouseLeave = () => {
-      if (isDragging) {
-        setIsDragging(false)
-        setStartCell(null)
-        setCurrentCell(null)
-        setSelectedCells([])
+      if (gameState.isDragging) {
+        dispatch({ type: 'END_SELECTION' })
       }
     }
 
@@ -541,35 +746,35 @@ export const OneWordRushPage = () => {
       document.removeEventListener('touchend', handleGlobalEnd)
       document.removeEventListener('mouseleave', handleMouseLeave)
     }
-  }, [isDragging])
+  }, [gameState.isDragging])
 
   const isCellSelected = (row: number, col: number) => {
-    return selectedCells.some(cell => cell.row === row && cell.col === col)
+    return gameState.selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
   }
 
   const isCellInFoundWord = (row: number, col: number) => {
-    return foundWordPositions.some((wordPosition: WordPosition) =>
+    return gameState.foundWordPositions.some((wordPosition: WordPosition) =>
       wordPosition.cells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
     )
   }
 
   const isCellInCurrentPath = (row: number, col: number): boolean => {
-    if (!currentCell || !startCell || !isDragging) return false
+    if (!gameState.currentCell || !gameState.startCell || !gameState.isDragging) return false
     
-    const deltaRow = currentCell.row - startCell.row
-    const deltaCol = currentCell.col - startCell.col
+    const deltaRow = gameState.currentCell.row - gameState.startCell.row
+    const deltaCol = gameState.currentCell.col - gameState.startCell.col
     
     // Only show path for valid directions (horizontal, vertical, diagonal)
     if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
       const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
-      if (steps === 0) return row === startCell.row && col === startCell.col
+      if (steps === 0) return row === gameState.startCell.row && col === gameState.startCell.col
       
       const stepRow = deltaRow / steps
       const stepCol = deltaCol / steps
       
       for (let i = 0; i <= steps; i++) {
-        const checkRow = startCell.row + i * stepRow
-        const checkCol = startCell.col + i * stepCol
+        const checkRow = gameState.startCell.row + i * stepRow
+        const checkCol = gameState.startCell.col + i * stepCol
         if (checkRow === row && checkCol === col) {
           return true
         }
@@ -583,11 +788,11 @@ export const OneWordRushPage = () => {
     const isSelected = isCellSelected(row, col)
     const isInCurrentPath = isCellInCurrentPath(row, col)
     const isInFoundWord = isCellInFoundWord(row, col)
-    const isStartCell = startCell && startCell.row === row && startCell.col === col
-    const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
-    const isDraggingStart = isDragging && isStartCell
-    const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
-    const isWordLocationCell = wordLocationCells.some(cell => cell.row === row && cell.col === col)
+    const isStartCell = gameState.startCell && gameState.startCell.row === row && gameState.startCell.col === col
+    const isCurrentCell = gameState.currentCell && gameState.currentCell.row === row && gameState.currentCell.col === col
+    const isDraggingStart = gameState.isDragging && isStartCell
+    const isDraggingCurrent = gameState.isDragging && isCurrentCell && !isStartCell
+    const isWordLocationCell = gameState.wordLocationCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
     
     const cellSize = isMobile ? '8vw' : '40px'
     const fontSize = isMobile ? '4vw' : '16px'
@@ -613,8 +818,8 @@ export const OneWordRushPage = () => {
     }
 
     // Flash effect for word location when time runs out (highest priority)
-    if (showingWordLocation && isWordLocationCell) {
-      const isFlashOn = flashPhase % 2 === 1 // Flash on odd phases
+    if (gameState.phase === 'showingWordLocation' && isWordLocationCell) {
+      const isFlashOn = gameState.flashPhase % 2 === 1 // Flash on odd phases
       return {
         ...baseStyle,
         backgroundColor: isFlashOn ? '#8b0000' : '#dc143c', // Dark red flashing
@@ -703,22 +908,23 @@ export const OneWordRushPage = () => {
   }
 
   const handleRestart = () => {
+    dispatch({ type: 'RESET_GAME' })
     startGame()
   }
 
   const getProgressPercentage = () => {
-    return (timeLeft / 30) * 100
+    return (gameState.timeLeft / 30) * 100
   }
 
   const getProgressColor = () => {
-    if (timeLeft > 20) return 'success'
-    if (timeLeft > 10) return 'warning'
+    if (gameState.timeLeft > 20) return 'success'
+    if (gameState.timeLeft > 10) return 'warning'
     return 'error'
   }
 
   // Visual line rendering during selection (like Classic Word Search)
   const renderSelectionLine = () => {
-    if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
+    if (!gameState.isDragging || !gameState.startCell || !gameState.currentCell || !gridRef.current) return null
     
     // Match One Word Rush actual grid layout with CSS gap
     const cellSize = isMobile ? window.innerWidth * 0.08 : 40
@@ -730,18 +936,18 @@ export const OneWordRushPage = () => {
     // Adjust offset to move anchor points more up and left for perfect centering
     const horizontalOffset = gap * 1.4 // Move even more to the left (twice the last adjustment)
     const verticalOffset = gap * 1.4   // Move even more up (twice the last adjustment)
-    const startX = startCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
-    const startY = startCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
-    const endX = currentCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
-    const endY = currentCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
+    const startX = gameState.startCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
+    const startY = gameState.startCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
+    const endX = gameState.currentCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
+    const endY = gameState.currentCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
     
     // Check if direction is valid
-    const deltaRow = currentCell.row - startCell.row
-    const deltaCol = currentCell.col - startCell.col
+    const deltaRow = gameState.currentCell.row - gameState.startCell.row
+    const deltaCol = gameState.currentCell.col - gameState.startCell.col
     const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
     
-    const gridWidth = grid[0].length * cellWithGap + gridPadding * 2
-    const gridHeight = grid.length * cellWithGap + gridPadding * 2
+    const gridWidth = gameState.grid[0].length * cellWithGap + gridPadding * 2
+    const gridHeight = gameState.grid.length * cellWithGap + gridPadding * 2
     const pathWidth = cellSize * 1.15 // Wider than cell size (115% vs 60% before)
     
     const validColor = isValidDirection ? "rgba(255, 87, 34, 0.8)" : "rgba(255, 152, 0, 0.6)"
@@ -786,7 +992,7 @@ export const OneWordRushPage = () => {
 
   // Mobile full-screen layout
   if (isMobile) {
-    if (!gameStarted) {
+    if (gameState.phase === 'idle') {
       return (
         <Box sx={{ 
           height: '100vh', 
@@ -940,23 +1146,23 @@ export const OneWordRushPage = () => {
             <Grid container spacing={1} alignItems="center">
               <Grid item xs={6} sm={3}>
                 <Typography variant="body2" color="primary">
-                  Score: {score.toLocaleString()}
+                  Score: {gameState.score.toLocaleString()}
                 </Typography>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Typography variant="body2">
-                  Words: {wordsFound}/10
+                  Words: {gameState.wordsFound}/10
                 </Typography>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Typography variant="body2">
-                  Combo: {combo}x
+                  Combo: {gameState.combo}x
                 </Typography>
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box>
                   <Typography variant="caption" gutterBottom>
-                    Time: {timeLeft}s
+                    Time: {gameState.timeLeft}s
                   </Typography>
                   <LinearProgress
                     variant="determinate"
@@ -972,10 +1178,10 @@ export const OneWordRushPage = () => {
           {/* Current Word */}
           <Card elevation={3} sx={{ mx: 1, mb: 1, textAlign: 'center', p: 1 }}>
             <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#ff5722' }}>
-              Find: {currentWord}
+              Find: {gameState.currentWord}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Word {currentWordIndex + 1} of {wordQueue.length}
+              Word {gameState.currentWordIndex + 1} of {gameState.wordQueue.length}
             </Typography>
           </Card>
 
@@ -1003,7 +1209,7 @@ export const OneWordRushPage = () => {
                 ref={gridRef}
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: `repeat(${grid[0]?.length || 10}, 1fr)`,
+                  gridTemplateColumns: `repeat(${gameState.grid[0]?.length || 10}, 1fr)`,
                   gap: '1px',
                   userSelect: 'none',
                   touchAction: 'none',
@@ -1014,7 +1220,7 @@ export const OneWordRushPage = () => {
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
-                {grid.map((row: string[], rowIndex: number) =>
+                {gameState.grid.map((row: string[], rowIndex: number) =>
                   row.map((letter: string, colIndex: number) => (
                     <Box
                       key={`${rowIndex}-${colIndex}`}
@@ -1035,7 +1241,7 @@ export const OneWordRushPage = () => {
 
               {/* Victory Dialog - When player completes all words */}
       <Dialog
-        open={gameOver && gameWon}
+        open={gameState.phase === 'gameOver' && gameState.gameWon}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -1077,7 +1283,7 @@ export const OneWordRushPage = () => {
                   Final Score
                 </Typography>
                 <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
-                  {score.toLocaleString()}
+                  {gameState.score.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
@@ -1123,7 +1329,7 @@ export const OneWordRushPage = () => {
             }}>
               <SpeedIcon sx={{ fontSize: 24, color: '#ff5722' }} />
               <Typography variant="h6">
-                Max Combo: {maxCombo}x
+                Max Combo: {gameState.maxCombo}x
               </Typography>
             </Box>
           </Box>
@@ -1170,7 +1376,7 @@ export const OneWordRushPage = () => {
 
       {/* Defeat Dialog - When time runs out */}
       <Dialog
-        open={gameOver && !gameWon}
+        open={gameState.phase === 'gameOver' && !gameState.gameWon}
         maxWidth="sm"
         fullWidth
         PaperProps={{
@@ -1189,7 +1395,7 @@ export const OneWordRushPage = () => {
               Time's Up!
             </Typography>
             <Typography variant="h6" sx={{ opacity: 0.9 }}>
-              {wordsFound >= 5 ? 'Good effort! Keep practicing.' : 'Keep trying - you\'ll get faster!'}
+              {gameState.wordsFound >= 5 ? 'Good effort! Keep practicing.' : 'Keep trying - you\'ll get faster!'}
             </Typography>
           </Box>
         </DialogTitle>
@@ -1212,7 +1418,7 @@ export const OneWordRushPage = () => {
                   Final Score
                 </Typography>
                 <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
-                  {score.toLocaleString()}
+                  {gameState.score.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
@@ -1235,13 +1441,13 @@ export const OneWordRushPage = () => {
                   variant="h6" 
                   fontWeight="bold"
                   sx={{ 
-                    color: wordsFound >= 5 ? '#ffeb3b' : '#ffcdd2'
+                    color: gameState.wordsFound >= 5 ? '#ffeb3b' : '#ffcdd2'
                   }}
                 >
-                  {wordsFound}/10
+                  {gameState.wordsFound}/10
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  {[...Array(Math.min(wordsFound, 5))].map((_, i) => (
+                  {[...Array(Math.min(gameState.wordsFound, 5))].map((_, i) => (
                     <StarIcon key={i} sx={{ color: '#ffeb3b', fontSize: 16 }} />
                   ))}
                 </Box>
@@ -1249,7 +1455,7 @@ export const OneWordRushPage = () => {
             </Box>
 
             {/* Max Combo Display */}
-            {maxCombo > 0 && (
+            {gameState.maxCombo > 0 && (
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1261,7 +1467,7 @@ export const OneWordRushPage = () => {
               }}>
                 <SpeedIcon sx={{ fontSize: 24, color: '#ffeb3b' }} />
                 <Typography variant="h6">
-                  Best Combo: {maxCombo}x
+                  Best Combo: {gameState.maxCombo}x
                 </Typography>
               </Box>
             )}
@@ -1311,7 +1517,7 @@ export const OneWordRushPage = () => {
   }
 
   // Desktop layout (unchanged)
-  if (!gameStarted) {
+  if (gameState.phase === 'idle') {
     return (
       <Container 
         maxWidth="md" 
@@ -1400,23 +1606,23 @@ export const OneWordRushPage = () => {
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={3}>
                 <Typography variant="h6" color="primary">
-                  Score: {score.toLocaleString()}
+                  Score: {gameState.score.toLocaleString()}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={3}>
                 <Typography variant="h6">
-                  Words: {wordsFound}/10
+                  Words: {gameState.wordsFound}/10
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={3}>
                 <Typography variant="h6">
-                  Combo: {combo}x
+                  Combo: {gameState.combo}x
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={3}>
                 <Box>
                   <Typography variant="body2" gutterBottom>
-                    Time Left: {timeLeft}s
+                    Time Left: {gameState.timeLeft}s
                   </Typography>
                   <LinearProgress
                     variant="determinate"
@@ -1434,10 +1640,10 @@ export const OneWordRushPage = () => {
         <Grid item xs={12}>
           <Card elevation={3} sx={{ textAlign: 'center', p: 3, mb: 2 }}>
             <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#ff5722' }}>
-              Find: {currentWord}
+              Find: {gameState.currentWord}
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Word {currentWordIndex + 1} of {wordQueue.length}
+              Word {gameState.currentWordIndex + 1} of {gameState.wordQueue.length}
             </Typography>
           </Card>
         </Grid>
@@ -1458,7 +1664,7 @@ export const OneWordRushPage = () => {
               ref={gridRef}
               sx={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(${grid[0]?.length || 10}, 1fr)`,
+                gridTemplateColumns: `repeat(${gameState.grid[0]?.length || 10}, 1fr)`,
                 gap: '2px',
                 userSelect: 'none',
                 touchAction: 'none',
@@ -1469,7 +1675,7 @@ export const OneWordRushPage = () => {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              {grid.map((row: string[], rowIndex: number) =>
+              {gameState.grid.map((row: string[], rowIndex: number) =>
                 row.map((letter: string, colIndex: number) => (
                   <Box
                     key={`${rowIndex}-${colIndex}`}
@@ -1489,7 +1695,7 @@ export const OneWordRushPage = () => {
       </Grid>
 
       {/* Game Over Dialog */}
-      <Dialog open={gameOver} maxWidth="sm" fullWidth>
+      <Dialog open={gameState.phase === 'gameOver'} maxWidth="sm" fullWidth>
         <DialogTitle>
           <Box textAlign="center">
             <EmojiEvents sx={{ fontSize: 48, color: '#ff5722', mb: 1 }} />
@@ -1501,14 +1707,14 @@ export const OneWordRushPage = () => {
         <DialogContent>
           <Box textAlign="center">
             <Typography variant="h5" gutterBottom>
-              Final Score: {score.toLocaleString()}
+              Final Score: {gameState.score.toLocaleString()}
             </Typography>
             <Typography variant="h6" gutterBottom>
-              Words Found: {wordsFound}/10
+              Words Found: {gameState.wordsFound}/10
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              {wordsFound >= 8 ? 'Excellent work!' : 
-               wordsFound >= 5 ? 'Good job!' : 
+              {gameState.wordsFound >= 8 ? 'Excellent work!' : 
+               gameState.wordsFound >= 5 ? 'Good job!' : 
                'Keep practicing!'}
             </Typography>
           </Box>
