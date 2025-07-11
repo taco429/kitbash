@@ -21,8 +21,7 @@ export const HomePage = () => {
       </Typography>
       
       <Typography variant="h6" color="text.secondary" paragraph>
-        A simple web project where I experiment with different ideas and build interactive demos. 
-        Feel free to explore and play around!
+        there's no theme to the things in here, feel free to poke around
       </Typography>
 
       <Grid container spacing={3}>
