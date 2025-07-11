@@ -466,8 +466,8 @@ export const OneWordRushPage = () => {
     const isDraggingStart = isDragging && isStartCell
     const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
     
-    const cellSize = isMobile ? '7vw' : '35px'
-    const fontSize = isMobile ? '3.5vw' : '14px'
+    const cellSize = isMobile ? '8vw' : '40px'
+    const fontSize = isMobile ? '4vw' : '16px'
     
     const baseStyle = {
       width: cellSize,
@@ -576,6 +576,71 @@ export const OneWordRushPage = () => {
     if (timeLeft > 20) return 'success'
     if (timeLeft > 10) return 'warning'
     return 'error'
+  }
+
+  // Visual line rendering during selection (like Classic Word Search)
+  const renderSelectionLine = () => {
+    if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
+    
+    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
+    const cellMargin = isMobile ? 2 : 2
+    const cellWithMargin = cellSize + cellMargin
+    const gridPadding = isMobile ? 8 : 16
+    const borderWidth = 2
+    
+    // Calculate coordinates for line drawing
+    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    
+    // Check if direction is valid
+    const deltaRow = currentCell.row - startCell.row
+    const deltaCol = currentCell.col - startCell.col
+    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
+    
+    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
+    const pathWidth = cellSize * 0.8
+    
+    const validColor = isValidDirection ? "rgba(255, 87, 34, 0.8)" : "rgba(255, 152, 0, 0.6)"
+    
+    return (
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 7 // Above path cells but below start/end cells
+        }}
+      >
+        <svg
+          width={gridWidth}
+          height={gridHeight}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none'
+          }}
+        >
+          <line
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
+            stroke={validColor}
+            strokeWidth={pathWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.9"
+          />
+        </svg>
+      </Box>
+    )
   }
 
   // Mobile full-screen layout
@@ -821,6 +886,7 @@ export const OneWordRushPage = () => {
                     </Box>
                   ))
                 )}
+                {renderSelectionLine()}
               </Box>
             </Paper>
           </Box>
@@ -1041,6 +1107,7 @@ export const OneWordRushPage = () => {
                   </Box>
                 ))
               )}
+              {renderSelectionLine()}
             </Box>
           </Paper>
         </Grid>
