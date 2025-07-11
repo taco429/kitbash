@@ -164,6 +164,12 @@ export const OneWordRushPage = () => {
       setGrid(result.grid)
       setTimeLeft(30) // Reset timer for new word
       setFoundWordPositions([]) // Clear highlighting from previous word
+      
+      // Clear any lingering selection state
+      setIsDragging(false)
+      setStartCell(null)
+      setCurrentCell(null)
+      setSelectedCells([])
     } else {
       // Fallback if word placement fails
       generateNewPuzzle(wordIndex)
@@ -180,6 +186,12 @@ export const OneWordRushPage = () => {
     setGameStarted(true)
     setGameOver(false)
     setFoundWordPositions([])
+    
+    // Clear any lingering selection state
+    setIsDragging(false)
+    setStartCell(null)
+    setCurrentCell(null)
+    setSelectedCells([])
     
     // Generate first puzzle
     const word = words[0]
@@ -247,11 +259,7 @@ export const OneWordRushPage = () => {
       }
       setFoundWordPositions(prev => [...prev, newFoundWord])
       
-      // Clear selection
-      setSelectedCells([])
-      setIsDragging(false)
-      setStartCell(null)
-      setCurrentCell(null)
+      // Don't clear selection here - let handleSelectionEnd handle it
       
       // Move to next word
       const nextWordIndex = currentWordIndex + 1
@@ -268,10 +276,11 @@ export const OneWordRushPage = () => {
     return false
   }, [selectedCells, grid, currentWord, timeLeft, combo, generateNewPuzzle])
 
-  // Handle selection
+  // Enhanced getCellFromCoordinates for smooth tracking (like Classic Word Search)
   const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null
     
+    // Use elementFromPoint to directly find which cell element is under the coordinates
     const element = document.elementFromPoint(clientX, clientY)
     
     if (element && element.hasAttribute('data-cell')) {
@@ -301,32 +310,36 @@ export const OneWordRushPage = () => {
     if (cell && (!currentCell || cell.row !== currentCell.row || cell.col !== currentCell.col)) {
       setCurrentCell(cell)
       
-      // Only update selectedCells if we're in a valid direction
+      // Always update selectedCells based on current position
       const deltaRow = cell.row - startCell.row
       const deltaCol = cell.col - startCell.col
       
       if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
-        // Calculate cells in line from start to current
+        // Valid direction - calculate cells in line from start to current
         const newSelectedCells = getLineCells(startCell, cell)
         setSelectedCells(newSelectedCells)
+      } else {
+        // Invalid direction - only keep the start cell selected
+        setSelectedCells([startCell])
       }
     }
   }
 
   const handleSelectionEnd = () => {
     if (isDragging) {
-      // Check if word is found
+      // Check if word is found BEFORE clearing state
       const wordFound = checkWordFound()
       
       if (!wordFound) {
         // Reset combo if word not found
         setCombo(0)
-        setSelectedCells([])
       }
       
+      // Always clean up state immediately - this prevents lingering highlights
       setIsDragging(false)
       setStartCell(null)
       setCurrentCell(null)
+      setSelectedCells([])
     }
   }
 
@@ -362,15 +375,19 @@ export const OneWordRushPage = () => {
     handleSelectionStart(row, col)
   }
 
+
+
   const handleMouseMove = (event: React.MouseEvent) => {
-    handleSelectionMove(event.clientX, event.clientY)
+    if (isDragging) {
+      handleSelectionMove(event.clientX, event.clientY)
+    }
   }
 
   const handleMouseUp = () => {
     handleSelectionEnd()
   }
 
-  // Touch handlers
+  // Touch handlers - improved like Classic Word Search
   const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
     event.preventDefault()
     handleSelectionStart(row, col)
@@ -378,7 +395,7 @@ export const OneWordRushPage = () => {
 
   const handleTouchMove = (event: React.TouchEvent) => {
     event.preventDefault()
-    if (event.touches.length > 0) {
+    if (isDragging && event.touches.length > 0) {
       const touch = event.touches[0]
       handleSelectionMove(touch.clientX, touch.clientY)
     }
@@ -404,20 +421,35 @@ export const OneWordRushPage = () => {
     }
   }, [isMobile, gameStarted])
 
-  // Global event handlers
+  // Global event handlers - improved cleanup like Classic Word Search
   useEffect(() => {
     const handleGlobalEnd = () => {
       if (isDragging) {
-        handleSelectionEnd()
+        setIsDragging(false)
+        setStartCell(null)
+        setCurrentCell(null)
+        setSelectedCells([])
+      }
+    }
+
+    // Also listen for mouse leave events to clear selection
+    const handleMouseLeave = () => {
+      if (isDragging) {
+        setIsDragging(false)
+        setStartCell(null)
+        setCurrentCell(null)
+        setSelectedCells([])
       }
     }
 
     document.addEventListener('mouseup', handleGlobalEnd)
     document.addEventListener('touchend', handleGlobalEnd)
+    document.addEventListener('mouseleave', handleMouseLeave)
     
     return () => {
       document.removeEventListener('mouseup', handleGlobalEnd)
       document.removeEventListener('touchend', handleGlobalEnd)
+      document.removeEventListener('mouseleave', handleMouseLeave)
     }
   }, [isDragging])
 
@@ -483,7 +515,7 @@ export const OneWordRushPage = () => {
       fontWeight: 'bold',
       transition: 'all 0.1s ease',
       touchAction: 'none',
-      margin: '1px',
+      margin: isMobile ? '1px' : '2px',
       boxSizing: 'border-box' as const,
       position: 'relative' as const,
       zIndex: 1
@@ -582,26 +614,29 @@ export const OneWordRushPage = () => {
   const renderSelectionLine = () => {
     if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
     
+    // Match One Word Rush actual grid layout with CSS gap
     const cellSize = isMobile ? window.innerWidth * 0.08 : 40
-    const cellMargin = isMobile ? 2 : 2
-    const cellWithMargin = cellSize + cellMargin
-    const gridPadding = isMobile ? 8 : 16
-    const borderWidth = 2
+    const gap = isMobile ? 1 : 2 // Match actual CSS grid gap
+    const cellWithGap = cellSize + gap // Total space per cell including gap
+    const gridPadding = isMobile ? 16 : 16 // Match Paper padding
     
-    // Calculate coordinates for line drawing
-    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
+    // Calculate coordinates for line drawing - perfectly centered on cells
+    // Adjust offset to move anchor points more up and left for perfect centering
+    const horizontalOffset = gap * 1.4 // Move even more to the left (twice the last adjustment)
+    const verticalOffset = gap * 1.4   // Move even more up (twice the last adjustment)
+    const startX = startCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
+    const startY = startCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
+    const endX = currentCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
+    const endY = currentCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
     
     // Check if direction is valid
     const deltaRow = currentCell.row - startCell.row
     const deltaCol = currentCell.col - startCell.col
     const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
     
-    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const pathWidth = cellSize * 0.8
+    const gridWidth = grid[0].length * cellWithGap + gridPadding * 2
+    const gridHeight = grid.length * cellWithGap + gridPadding * 2
+    const pathWidth = cellSize * 1.15 // Wider than cell size (115% vs 60% before)
     
     const validColor = isValidDirection ? "rgba(255, 87, 34, 0.8)" : "rgba(255, 152, 0, 0.6)"
     
