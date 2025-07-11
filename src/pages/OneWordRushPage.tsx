@@ -7,7 +7,6 @@ import {
   Box, 
   Container,
   Grid,
-  Chip,
   Paper,
   AppBar,
   Toolbar,
@@ -25,19 +24,11 @@ import {
   PlayArrow,
   Refresh,
   EmojiEvents,
-  Flash,
+  FlashOn,
   Timer as TimerIcon,
   Star as StarIcon
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
-
-interface Cell {
-  letter: string
-  row: number
-  col: number
-  isSelected: boolean
-  isInFoundWord: boolean
-}
 
 interface WordPosition {
   word: string
@@ -46,8 +37,7 @@ interface WordPosition {
 
 export const OneWordRushPage = () => {
   const navigate = useNavigate()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isMobile = useMediaQuery(useTheme().breakpoints.down('md'))
   
   // Game state
   const [grid, setGrid] = useState<string[][]>([])
@@ -62,8 +52,6 @@ export const OneWordRushPage = () => {
   const [wordQueue, setWordQueue] = useState<string[]>([])
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [combo, setCombo] = useState(0)
-  const [totalTime, setTotalTime] = useState(0)
-  const [bestTime, setBestTime] = useState<number | null>(null)
   
   // Selection state
   const [isDragging, setIsDragging] = useState(false)
@@ -72,7 +60,6 @@ export const OneWordRushPage = () => {
   
   const gridRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<number | null>(null)
-  const gameTimerRef = useRef<number | null>(null)
   
   // Word lists for different difficulties
   const easyWords = [
@@ -182,7 +169,6 @@ export const OneWordRushPage = () => {
     setScore(0)
     setWordsFound(0)
     setCombo(0)
-    setTotalTime(0)
     setGameStarted(true)
     setGameOver(false)
     setFoundWordPositions([])
@@ -203,9 +189,8 @@ export const OneWordRushPage = () => {
   // Timer logic
   useEffect(() => {
     if (gameStarted && !gameOver && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         setTimeLeft((prev: number) => prev - 1)
-        setTotalTime((prev: number) => prev + 1)
       }, 1000)
     } else {
       if (timerRef.current) {
@@ -411,8 +396,8 @@ export const OneWordRushPage = () => {
   }
 
   const isCellInFoundWord = (row: number, col: number) => {
-    return foundWordPositions.some(wordPosition =>
-      wordPosition.cells.some(cell => cell.row === row && cell.col === col)
+    return foundWordPositions.some((wordPosition: WordPosition) =>
+      wordPosition.cells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
     )
   }
 
@@ -505,7 +490,7 @@ export const OneWordRushPage = () => {
         <Card elevation={4} sx={{ textAlign: 'center', p: 4 }}>
           <CardContent>
             <Box sx={{ mb: 3 }}>
-              <Flash sx={{ fontSize: 60, color: '#ff5722', mb: 2 }} />
+              <FlashOn sx={{ fontSize: 60, color: '#ff5722', mb: 2 }} />
               <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
                 One Word Rush
               </Typography>
