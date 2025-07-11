@@ -24,9 +24,7 @@ import {
   PlayArrow,
   Refresh,
   EmojiEvents,
-  FlashOn,
-  Timer as TimerIcon,
-  Star as StarIcon
+  FlashOn
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 
