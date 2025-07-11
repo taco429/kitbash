@@ -389,9 +389,9 @@ export const OneWordRushPage = () => {
     handleSelectionEnd()
   }
 
-  // Prevent body scrolling on mobile word search
+  // Prevent body scrolling on mobile word search (only during game)
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile && gameStarted) {
       document.body.style.overflow = 'hidden'
       document.body.style.height = '100vh'
       document.body.style.touchAction = 'none'
@@ -402,7 +402,7 @@ export const OneWordRushPage = () => {
         document.body.style.touchAction = ''
       }
     }
-  }, [isMobile])
+  }, [isMobile, gameStarted])
 
   // Global event handlers
   useEffect(() => {
@@ -580,7 +580,22 @@ export const OneWordRushPage = () => {
 
   if (!gameStarted) {
     return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container 
+        maxWidth="md" 
+        sx={{ 
+          py: 4,
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          ...(isMobile && {
+            py: 2,
+            px: 2,
+            minHeight: 'auto',
+            height: 'auto'
+          })
+        }}
+      >
         <AppBar position="static" sx={{ mb: 4, borderRadius: 2 }}>
           <Toolbar>
             <IconButton edge="start" color="inherit" onClick={handleBack}>
@@ -592,9 +607,9 @@ export const OneWordRushPage = () => {
           </Toolbar>
         </AppBar>
 
-        <Card elevation={4} sx={{ textAlign: 'center', p: 4 }}>
+        <Card elevation={4} sx={{ textAlign: 'center', p: 4, flex: 1 }}>
           <CardContent>
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 4 }}>
               <FlashOn sx={{ fontSize: 60, color: '#ff5722', mb: 2 }} />
               <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
                 One Word Rush
@@ -603,42 +618,6 @@ export const OneWordRushPage = () => {
                 Find words as fast as you can! You have 30 seconds per word.
               </Typography>
             </Box>
-
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={4}>
-                <Box>
-                  <TimerIcon sx={{ fontSize: 40, color: '#ff5722', mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Time Attack
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    30 seconds per word - speed is everything!
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box>
-                  <StarIcon sx={{ fontSize: 40, color: '#ff5722', mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Combo System
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Chain correct answers for bonus points!
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Box>
-                  <EmojiEvents sx={{ fontSize: 40, color: '#ff5722', mb: 1 }} />
-                  <Typography variant="h6" gutterBottom>
-                    Speed Bonus
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Find words faster for extra points!
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
 
             <Button
               variant="contained"
