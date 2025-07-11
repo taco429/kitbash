@@ -413,6 +413,10 @@ export const OneWordRushPage = () => {
   const getCellStyle = (row: number, col: number) => {
     const isSelected = isCellSelected(row, col)
     const isInFoundWord = isCellInFoundWord(row, col)
+    const isStartCell = startCell && startCell.row === row && startCell.col === col
+    const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
+    const isDraggingStart = isDragging && isStartCell
+    const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
     
     const cellSize = isMobile ? '7vw' : '35px'
     const fontSize = isMobile ? '3.5vw' : '14px'
@@ -432,7 +436,37 @@ export const OneWordRushPage = () => {
       transition: 'all 0.1s ease',
       touchAction: 'none',
       margin: '1px',
-      boxSizing: 'border-box' as const
+      boxSizing: 'border-box' as const,
+      position: 'relative' as const,
+      zIndex: 1
+    }
+
+    // Special styling for start cell during dragging
+    if (isDraggingStart) {
+      return {
+        ...baseStyle,
+        backgroundColor: '#ff5722',
+        color: 'white',
+        border: '3px solid #d84315',
+        borderRadius: '10px',
+        boxShadow: '0 0 12px rgba(255, 87, 34, 0.6)',
+        transform: 'scale(1.1)',
+        zIndex: 10
+      }
+    }
+
+    // Special styling for current cell during dragging
+    if (isDraggingCurrent) {
+      return {
+        ...baseStyle,
+        backgroundColor: '#ff7043',
+        color: 'white',
+        border: '3px solid #ff5722',
+        borderRadius: '10px',
+        boxShadow: '0 0 10px rgba(255, 112, 67, 0.5)',
+        transform: 'scale(1.05)',
+        zIndex: 9
+      }
     }
 
     if (isSelected) {
@@ -442,7 +476,8 @@ export const OneWordRushPage = () => {
         color: 'white',
         border: '2px solid #d84315',
         borderRadius: '8px',
-        boxShadow: '0 0 8px rgba(255, 87, 34, 0.5)'
+        boxShadow: '0 0 8px rgba(255, 87, 34, 0.5)',
+        zIndex: 6
       }
     }
 
@@ -451,7 +486,8 @@ export const OneWordRushPage = () => {
         ...baseStyle,
         backgroundColor: 'rgba(76, 175, 80, 0.3)',
         color: '#2e7d32',
-        border: '1px solid #4caf50'
+        border: '1px solid #4caf50',
+        zIndex: 2
       }
     }
 
