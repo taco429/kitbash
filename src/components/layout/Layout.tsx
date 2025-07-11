@@ -25,6 +25,7 @@ import {
   Games,
   Search,
 } from '@mui/icons-material'
+import { getVersion } from '../../utils/version'
 
 const drawerWidth = 240
 
@@ -140,7 +141,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2">
-            A fun web playground
+            v{getVersion()}
           </Typography>
         </Toolbar>
       </AppBar>

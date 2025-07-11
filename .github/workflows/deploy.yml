@@ -3,6 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
+  # Run on all pushes to main, including version bump commits
+  workflow_run:
+    workflows: ["Auto Version Bump"]
+    types:
+      - completed
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -19,10 +24,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Only run if the version bump workflow succeeded or if it's a direct push to main
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        # For workflow_run, we need to fetch the latest commit
+        ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
