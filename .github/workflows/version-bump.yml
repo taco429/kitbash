@@ -8,6 +8,10 @@ on:
 jobs:
   version-bump:
     runs-on: ubuntu-latest
+    # Add explicit permissions to fix 403 error
+    permissions:
+      contents: write  # Required to push changes and create tags
+      actions: read    # Required to read actions
     # Only run if the push is not from the version bump commit itself
     if: "!contains(github.event.head_commit.message, 'chore: bump version')"
     
