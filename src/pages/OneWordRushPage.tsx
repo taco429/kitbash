@@ -301,9 +301,15 @@ export const OneWordRushPage = () => {
     if (cell && (!currentCell || cell.row !== currentCell.row || cell.col !== currentCell.col)) {
       setCurrentCell(cell)
       
-      // Calculate cells in line from start to current
-      const newSelectedCells = getLineCells(startCell, cell)
-      setSelectedCells(newSelectedCells)
+      // Only update selectedCells if we're in a valid direction
+      const deltaRow = cell.row - startCell.row
+      const deltaCol = cell.col - startCell.col
+      
+      if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
+        // Calculate cells in line from start to current
+        const newSelectedCells = getLineCells(startCell, cell)
+        setSelectedCells(newSelectedCells)
+      }
     }
   }
 
@@ -383,6 +389,21 @@ export const OneWordRushPage = () => {
     handleSelectionEnd()
   }
 
+  // Prevent body scrolling on mobile word search
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.height = '100vh'
+      document.body.style.touchAction = 'none'
+      
+      return () => {
+        document.body.style.overflow = ''
+        document.body.style.height = ''
+        document.body.style.touchAction = ''
+      }
+    }
+  }, [isMobile])
+
   // Global event handlers
   useEffect(() => {
     const handleGlobalEnd = () => {
@@ -410,8 +431,35 @@ export const OneWordRushPage = () => {
     )
   }
 
+  const isCellInCurrentPath = (row: number, col: number): boolean => {
+    if (!currentCell || !startCell || !isDragging) return false
+    
+    const deltaRow = currentCell.row - startCell.row
+    const deltaCol = currentCell.col - startCell.col
+    
+    // Only show path for valid directions (horizontal, vertical, diagonal)
+    if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
+      const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
+      if (steps === 0) return row === startCell.row && col === startCell.col
+      
+      const stepRow = deltaRow / steps
+      const stepCol = deltaCol / steps
+      
+      for (let i = 0; i <= steps; i++) {
+        const checkRow = startCell.row + i * stepRow
+        const checkCol = startCell.col + i * stepCol
+        if (checkRow === row && checkCol === col) {
+          return true
+        }
+      }
+    }
+    
+    return false
+  }
+
   const getCellStyle = (row: number, col: number) => {
     const isSelected = isCellSelected(row, col)
+    const isInCurrentPath = isCellInCurrentPath(row, col)
     const isInFoundWord = isCellInFoundWord(row, col)
     const isStartCell = startCell && startCell.row === row && startCell.col === col
     const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
@@ -478,6 +526,18 @@ export const OneWordRushPage = () => {
         borderRadius: '8px',
         boxShadow: '0 0 8px rgba(255, 87, 34, 0.5)',
         zIndex: 6
+      }
+    }
+
+    if (isInCurrentPath) {
+      return {
+        ...baseStyle,
+        backgroundColor: 'rgba(255, 87, 34, 0.4)',
+        color: '#d84315',
+        border: '2px solid #ff5722',
+        borderRadius: '8px',
+        boxShadow: '0 0 5px rgba(255, 87, 34, 0.4)',
+        zIndex: 8
       }
     }
 
