@@ -125,15 +125,6 @@ export const WordSearchHubPage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h2" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
-          Word Search Games
-        </Typography>
-        <Typography variant="h5" color="text.secondary" paragraph>
-          Choose your word search adventure! Different game modes for every type of player.
-        </Typography>
-      </Box>
-
       <Grid container spacing={3}>
         {gameTypes.map((gameType) => (
           <Grid item xs={12} md={6} key={gameType.id}>
