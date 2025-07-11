@@ -26,7 +26,9 @@ import {
   EmojiEvents,
   FlashOn,
   Timer as TimerIcon,
-  Star as StarIcon
+  Star as StarIcon,
+  Home as HomeIcon,
+  Speed as SpeedIcon
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 
@@ -46,12 +48,14 @@ export const OneWordRushPage = () => {
   const [timeLeft, setTimeLeft] = useState(30)
   const [gameStarted, setGameStarted] = useState(false)
   const [gameOver, setGameOver] = useState(false)
+  const [gameWon, setGameWon] = useState(false)
   const [wordsFound, setWordsFound] = useState(0)
   const [selectedCells, setSelectedCells] = useState<Array<{ row: number; col: number }>>([])
   const [foundWordPositions, setFoundWordPositions] = useState<WordPosition[]>([])
   const [wordQueue, setWordQueue] = useState<string[]>([])
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [combo, setCombo] = useState(0)
+  const [maxCombo, setMaxCombo] = useState(0)
   
   // Flash effect state for showing word location when time runs out
   const [showingWordLocation, setShowingWordLocation] = useState(false)
@@ -155,6 +159,8 @@ export const OneWordRushPage = () => {
     const wordIndex = nextWordIndex !== undefined ? nextWordIndex : currentWordIndex
     
     if (wordIndex >= wordQueue.length) {
+      // Player completed all words - victory!
+      setGameWon(true)
       setGameOver(true)
       return
     }
@@ -188,8 +194,10 @@ export const OneWordRushPage = () => {
     setScore(0)
     setWordsFound(0)
     setCombo(0)
+    setMaxCombo(0)
     setGameStarted(true)
     setGameOver(false)
+    setGameWon(false)
     setFoundWordPositions([])
     
     // Clear flash effect state
@@ -294,9 +302,10 @@ export const OneWordRushPage = () => {
       const flashInterval = setInterval(() => {
         setFlashPhase(prev => {
           if (prev >= 5) { // Flash 3 times (6 phases: 0,1,2,3,4,5)
-            // Flash complete, show game over
+            // Flash complete, show game over (loss due to time out)
             setShowingWordLocation(false)
             setWordLocationCells([])
+            setGameWon(false) // Explicitly set to false for loss
             setGameOver(true)
             return 0
           }
@@ -327,7 +336,11 @@ export const OneWordRushPage = () => {
       
              setScore((prev: number) => prev + totalPoints)
        setWordsFound((prev: number) => prev + 1)
-       setCombo((prev: number) => prev + 1)
+       setCombo((prev: number) => {
+         const newCombo = prev + 1
+         setMaxCombo(current => Math.max(current, newCombo))
+         return newCombo
+       })
       
       // Add to found words
       const newFoundWord: WordPosition = {
@@ -1020,45 +1033,279 @@ export const OneWordRushPage = () => {
           </Box>
         </Box>
 
-        {/* Game Over Dialog */}
-        <Dialog open={gameOver} maxWidth="sm" fullWidth>
-          <DialogTitle>
-            <Box textAlign="center">
-              <EmojiEvents sx={{ fontSize: 48, color: '#ff5722', mb: 1 }} />
-              <Typography variant="h4" component="div">
-                Game Over!
+              {/* Victory Dialog - When player completes all words */}
+      <Dialog
+        open={gameOver && gameWon}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            textAlign: 'center'
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <EmojiEvents sx={{ fontSize: 60, color: '#ffd700' }} />
+            <Typography variant="h4" component="h2" fontWeight="bold">
+              Perfect Rush!
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9 }}>
+              You found all 10 words!
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
+            {/* Score Display */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2,
+              p: 2
+            }}>
+              <EmojiEvents sx={{ fontSize: 32, color: '#ffd700' }} />
+              <Box>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  Final Score
+                </Typography>
+                <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
+                  {score.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Words Found Display */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2,
+              p: 2
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  Words Found:
+                </Typography>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="bold"
+                  sx={{ color: '#4caf50' }}
+                >
+                  10/10
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {[...Array(5)].map((_, i) => (
+                    <StarIcon key={i} sx={{ color: '#ffd700', fontSize: 16 }} />
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Max Combo Display */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2,
+              p: 2
+            }}>
+              <SpeedIcon sx={{ fontSize: 24, color: '#ff5722' }} />
+              <Typography variant="h6">
+                Max Combo: {maxCombo}x
               </Typography>
             </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Box textAlign="center">
-              <Typography variant="h5" gutterBottom>
-                Final Score: {score.toLocaleString()}
-              </Typography>
-              <Typography variant="h6" gutterBottom>
-                Words Found: {wordsFound}/10
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                {wordsFound >= 8 ? 'Excellent work!' : 
-                 wordsFound >= 5 ? 'Good job!' : 
-                 'Keep practicing!'}
-              </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3 }}>
+          <Button
+            variant="contained"
+            onClick={handleRestart}
+            startIcon={<Refresh />}
+            sx={{
+              backgroundColor: '#4caf50',
+              color: 'white',
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: '#45a049'
+              }
+            }}
+          >
+            Play Again
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleBack}
+            startIcon={<HomeIcon />}
+            sx={{
+              borderColor: 'white',
+              color: 'white',
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              '&:hover': {
+                borderColor: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            Back to Hub
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Defeat Dialog - When time runs out */}
+      <Dialog
+        open={gameOver && !gameWon}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+            color: 'white',
+            textAlign: 'center'
+          }
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <TimerIcon sx={{ fontSize: 60, color: '#ffeb3b' }} />
+            <Typography variant="h4" component="h2" fontWeight="bold">
+              Time's Up!
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9 }}>
+              {wordsFound >= 5 ? 'Good effort! Keep practicing.' : 'Keep trying - you\'ll get faster!'}
+            </Typography>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, py: 2 }}>
+            {/* Score Display */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2,
+              p: 2
+            }}>
+              <EmojiEvents sx={{ fontSize: 32, color: '#ffeb3b' }} />
+              <Box>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  Final Score
+                </Typography>
+                <Typography variant="h5" fontFamily="monospace" fontWeight="bold">
+                  {score.toLocaleString()}
+                </Typography>
+              </Box>
             </Box>
-          </DialogContent>
-          <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-            <Button
-              variant="contained"
-              onClick={handleRestart}
-              startIcon={<Refresh />}
-              sx={{ bgcolor: '#ff5722', '&:hover': { bgcolor: '#d84315' } }}
-            >
-              Play Again
-            </Button>
-            <Button variant="outlined" onClick={handleBack}>
-              Back to Hub
-            </Button>
-          </DialogActions>
-        </Dialog>
+
+            {/* Words Found Display */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: 1,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: 2,
+              p: 2
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  Words Found:
+                </Typography>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="bold"
+                  sx={{ 
+                    color: wordsFound >= 5 ? '#ffeb3b' : '#ffcdd2'
+                  }}
+                >
+                  {wordsFound}/10
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {[...Array(Math.min(wordsFound, 5))].map((_, i) => (
+                    <StarIcon key={i} sx={{ color: '#ffeb3b', fontSize: 16 }} />
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Max Combo Display */}
+            {maxCombo > 0 && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: 1,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 2,
+                p: 2
+              }}>
+                <SpeedIcon sx={{ fontSize: 24, color: '#ffeb3b' }} />
+                <Typography variant="h6">
+                  Best Combo: {maxCombo}x
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3 }}>
+          <Button
+            variant="contained"
+            onClick={handleRestart}
+            startIcon={<Refresh />}
+            sx={{
+              backgroundColor: '#ff5722',
+              color: 'white',
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: '#d84315'
+              }
+            }}
+          >
+            Try Again
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleBack}
+            startIcon={<HomeIcon />}
+            sx={{
+              borderColor: 'white',
+              color: 'white',
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              '&:hover': {
+                borderColor: 'white',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            Back to Hub
+          </Button>
+        </DialogActions>
+      </Dialog>
       </Box>
     )
   }
