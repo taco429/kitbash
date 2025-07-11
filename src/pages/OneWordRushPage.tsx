@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { 
   Card, 
   CardContent, 
@@ -356,7 +356,7 @@ export const OneWordRushPage = () => {
     handleSelectionStart(row, col)
   }
 
-  const handleMouseMove = (event: any) => {
+  const handleMouseMove = (event: React.MouseEvent) => {
     handleSelectionMove(event.clientX, event.clientY)
   }
 
@@ -365,12 +365,12 @@ export const OneWordRushPage = () => {
   }
 
   // Touch handlers
-  const handleTouchStart = (event: any, row: number, col: number) => {
+  const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
     event.preventDefault()
     handleSelectionStart(row, col)
   }
 
-  const handleTouchMove = (event: any) => {
+  const handleTouchMove = (event: React.TouchEvent) => {
     event.preventDefault()
     if (event.touches.length > 0) {
       const touch = event.touches[0]
@@ -378,7 +378,7 @@ export const OneWordRushPage = () => {
     }
   }
 
-  const handleTouchEnd = (event: any) => {
+  const handleTouchEnd = (event: React.TouchEvent) => {
     event.preventDefault()
     handleSelectionEnd()
   }
@@ -664,7 +664,7 @@ export const OneWordRushPage = () => {
                     data-cell={`${rowIndex}-${colIndex}`}
                     sx={getCellStyle(rowIndex, colIndex)}
                     onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onTouchStart={(e: TouchEvent) => handleTouchStart(e, rowIndex, colIndex)}
+                    onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
                   >
                     {letter}
                   </Box>
