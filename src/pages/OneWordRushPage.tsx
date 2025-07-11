@@ -278,7 +278,9 @@ export const OneWordRushPage = () => {
   // Utility functions
   const getRandomWords = useCallback(() => {
     const allWords = [...easyWords, ...mediumWords, ...hardWords]
-    const shuffled = [...allWords]
+    // Filter out words longer than 10 characters to prevent display issues on mobile
+    const filteredWords = allWords.filter(word => word.length <= 10)
+    const shuffled = [...filteredWords]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
