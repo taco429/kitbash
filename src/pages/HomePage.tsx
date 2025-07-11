@@ -17,7 +17,7 @@ export const HomePage = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h3" component="h1" gutterBottom>
-        Welcome to Kitbash
+        kitbash - a bunch of different things stuck together
       </Typography>
       
       <Typography variant="h6" color="text.secondary" paragraph>
