@@ -53,6 +53,11 @@ export const OneWordRushPage = () => {
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
   const [combo, setCombo] = useState(0)
   
+  // Flash effect state for showing word location when time runs out
+  const [showingWordLocation, setShowingWordLocation] = useState(false)
+  const [wordLocationCells, setWordLocationCells] = useState<Array<{ row: number; col: number }>>([])
+  const [flashPhase, setFlashPhase] = useState(0)
+  
   // Selection state
   const [isDragging, setIsDragging] = useState(false)
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
@@ -187,6 +192,11 @@ export const OneWordRushPage = () => {
     setGameOver(false)
     setFoundWordPositions([])
     
+    // Clear flash effect state
+    setShowingWordLocation(false)
+    setWordLocationCells([])
+    setFlashPhase(0)
+    
     // Clear any lingering selection state
     setIsDragging(false)
     setStartCell(null)
@@ -206,9 +216,52 @@ export const OneWordRushPage = () => {
     }
   }, [getRandomWords, generateRandomGrid, placeWordInGrid])
 
-  // Timer logic
+  // Function to find where the current word is located in the grid
+  const findWordInGrid = useCallback((word: string, grid: string[][]): Array<{ row: number; col: number }> => {
+    const directions = [
+      { row: 0, col: 1 },   // horizontal
+      { row: 1, col: 0 },   // vertical
+      { row: 1, col: 1 },   // diagonal down-right
+      { row: 1, col: -1 },  // diagonal down-left
+      { row: 0, col: -1 },  // horizontal backwards
+      { row: -1, col: 0 },  // vertical backwards
+      { row: -1, col: -1 }, // diagonal up-left
+      { row: -1, col: 1 }   // diagonal up-right
+    ]
+    
+    for (let row = 0; row < grid.length; row++) {
+      for (let col = 0; col < grid[0].length; col++) {
+        for (const direction of directions) {
+          const cells: Array<{ row: number; col: number }> = []
+          let matches = true
+          
+          for (let i = 0; i < word.length; i++) {
+            const checkRow = row + direction.row * i
+            const checkCol = col + direction.col * i
+            
+            if (checkRow < 0 || checkRow >= grid.length || 
+                checkCol < 0 || checkCol >= grid[0].length ||
+                grid[checkRow][checkCol] !== word[i]) {
+              matches = false
+              break
+            }
+            
+            cells.push({ row: checkRow, col: checkCol })
+          }
+          
+          if (matches) {
+            return cells
+          }
+        }
+      }
+    }
+    
+    return []
+  }, [])
+
+  // Timer logic with flash effect when time runs out
   useEffect(() => {
-    if (gameStarted && !gameOver && timeLeft > 0) {
+    if (gameStarted && !gameOver && !showingWordLocation && timeLeft > 0) {
       timerRef.current = window.setInterval(() => {
         setTimeLeft((prev: number) => prev - 1)
       }, 1000)
@@ -218,8 +271,12 @@ export const OneWordRushPage = () => {
         timerRef.current = null
       }
       
-      if (gameStarted && timeLeft === 0) {
-        setGameOver(true)
+      if (gameStarted && timeLeft === 0 && !showingWordLocation) {
+        // Find the word location and start flash effect
+        const wordCells = findWordInGrid(currentWord, grid)
+        setWordLocationCells(wordCells)
+        setShowingWordLocation(true)
+        setFlashPhase(0)
       }
     }
     
@@ -229,7 +286,27 @@ export const OneWordRushPage = () => {
         timerRef.current = null
       }
     }
-  }, [gameStarted, gameOver, timeLeft])
+  }, [gameStarted, gameOver, timeLeft, showingWordLocation, currentWord, grid, findWordInGrid])
+
+  // Flash effect for showing word location
+  useEffect(() => {
+    if (showingWordLocation) {
+      const flashInterval = setInterval(() => {
+        setFlashPhase(prev => {
+          if (prev >= 5) { // Flash 3 times (6 phases: 0,1,2,3,4,5)
+            // Flash complete, show game over
+            setShowingWordLocation(false)
+            setWordLocationCells([])
+            setGameOver(true)
+            return 0
+          }
+          return prev + 1
+        })
+      }, 300) // Flash every 300ms
+      
+      return () => clearInterval(flashInterval)
+    }
+  }, [showingWordLocation])
 
   const checkWordFound = useCallback(() => {
     if (selectedCells.length === 0) return false
@@ -497,6 +574,7 @@ export const OneWordRushPage = () => {
     const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
     const isDraggingStart = isDragging && isStartCell
     const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
+    const isWordLocationCell = wordLocationCells.some(cell => cell.row === row && cell.col === col)
     
     const cellSize = isMobile ? '8vw' : '40px'
     const fontSize = isMobile ? '4vw' : '16px'
@@ -519,6 +597,21 @@ export const OneWordRushPage = () => {
       boxSizing: 'border-box' as const,
       position: 'relative' as const,
       zIndex: 1
+    }
+
+    // Flash effect for word location when time runs out (highest priority)
+    if (showingWordLocation && isWordLocationCell) {
+      const isFlashOn = flashPhase % 2 === 1 // Flash on odd phases
+      return {
+        ...baseStyle,
+        backgroundColor: isFlashOn ? '#8b0000' : '#dc143c', // Dark red flashing
+        color: 'white',
+        border: '3px solid #8b0000',
+        borderRadius: '8px',
+        boxShadow: isFlashOn ? '0 0 15px rgba(139, 0, 0, 0.8)' : '0 0 10px rgba(220, 20, 60, 0.6)',
+        transform: isFlashOn ? 'scale(1.1)' : 'scale(1.05)',
+        zIndex: 15 // Highest priority
+      }
     }
 
     // Special styling for start cell during dragging
