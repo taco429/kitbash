@@ -54,9 +54,9 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Check if we're on the word search page and on mobile for full-screen mode
-  const isWordSearchPage = location.pathname === '/word-search'
-  const showFullScreen = isWordSearchPage && isMobile
+  // Check if we're on a word search game page (not the hub) and on mobile for full-screen mode
+  const isWordSearchGamePage = location.pathname.startsWith('/word-search/') && location.pathname !== '/word-search'
+  const showFullScreen = isWordSearchGamePage && isMobile
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
