@@ -24,7 +24,9 @@ import {
   PlayArrow,
   Refresh,
   EmojiEvents,
-  FlashOn
+  FlashOn,
+  Timer as TimerIcon,
+  Star as StarIcon
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 
@@ -576,22 +578,310 @@ export const OneWordRushPage = () => {
     return 'error'
   }
 
+  // Mobile full-screen layout
+  if (isMobile) {
+    if (!gameStarted) {
+      return (
+        <Box sx={{ 
+          height: '100vh', 
+          width: '100vw', 
+          overflow: 'hidden',
+          position: 'relative',
+          backgroundColor: '#f5f5f5'
+        }}>
+          {/* Mobile Header */}
+          <AppBar position="fixed" sx={{ zIndex: 1100 }}>
+            <Toolbar>
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={handleBack}
+              >
+                <ArrowBack />
+              </IconButton>
+              <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
+                One Word Rush
+              </Typography>
+            </Toolbar>
+          </AppBar>
+
+          {/* Start Screen Content */}
+          <Box sx={{ 
+            pt: '56px', // Account for header height
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 2,
+            overflow: 'auto'
+          }}>
+            <Card elevation={4} sx={{ 
+              textAlign: 'center', 
+              p: 3, 
+              maxWidth: '100%',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}>
+              <CardContent>
+                <Box sx={{ mb: 3 }}>
+                  <FlashOn sx={{ fontSize: 50, color: '#ff5722', mb: 2 }} />
+                  <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    One Word Rush
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" paragraph>
+                    Find words as fast as you can! You have 30 seconds per word.
+                  </Typography>
+                </Box>
+
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  <Grid item xs={12}>
+                    <Box>
+                      <TimerIcon sx={{ fontSize: 32, color: '#ff5722', mb: 1 }} />
+                      <Typography variant="h6" gutterBottom>
+                        Time Attack
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        30 seconds per word - speed is everything!
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box>
+                      <StarIcon sx={{ fontSize: 32, color: '#ff5722', mb: 1 }} />
+                      <Typography variant="h6" gutterBottom>
+                        Combo System
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Chain correct answers for bonus points!
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box>
+                      <EmojiEvents sx={{ fontSize: 32, color: '#ff5722', mb: 1 }} />
+                      <Typography variant="h6" gutterBottom>
+                        Speed Bonus
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Find words faster for extra points!
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<PlayArrow />}
+                  onClick={startGame}
+                  sx={{
+                    fontSize: '1.1rem',
+                    py: 2,
+                    px: 4,
+                    bgcolor: '#ff5722',
+                    '&:hover': { bgcolor: '#d84315' }
+                  }}
+                >
+                  Start Rush
+                </Button>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      )
+    }
+
+    // Mobile gameplay screen
+    return (
+      <Box sx={{ 
+        height: '100vh', 
+        width: '100vw', 
+        overflow: 'hidden',
+        position: 'relative',
+        backgroundColor: '#f5f5f5'
+      }}>
+        {/* Mobile Header */}
+        <AppBar position="fixed" sx={{ zIndex: 1100 }}>
+          <Toolbar variant="dense">
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleBack}
+            >
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h6" sx={{ flexGrow: 1, ml: 1 }}>
+              One Word Rush
+            </Typography>
+            <Button color="inherit" onClick={handleRestart} startIcon={<Refresh />}>
+              Restart
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        {/* Game Content */}
+        <Box sx={{ 
+          pt: '48px', // Account for header height
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          {/* Game Stats */}
+          <Paper elevation={3} sx={{ m: 1, p: 1 }}>
+            <Grid container spacing={1} alignItems="center">
+              <Grid item xs={6} sm={3}>
+                <Typography variant="body2" color="primary">
+                  Score: {score.toLocaleString()}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="body2">
+                  Words: {wordsFound}/10
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="body2">
+                  Combo: {combo}x
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Box>
+                  <Typography variant="caption" gutterBottom>
+                    Time: {timeLeft}s
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={getProgressPercentage()}
+                    color={getProgressColor()}
+                    sx={{ height: 6, borderRadius: 3 }}
+                  />
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* Current Word */}
+          <Card elevation={3} sx={{ mx: 1, mb: 1, textAlign: 'center', p: 1 }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', color: '#ff5722' }}>
+              Find: {currentWord}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Word {currentWordIndex + 1} of {wordQueue.length}
+            </Typography>
+          </Card>
+
+          {/* Game Grid */}
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 1
+          }}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 1,
+                display: 'flex',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                width: '100%',
+                maxWidth: '100vw'
+              }}
+            >
+              <Box
+                ref={gridRef}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${grid[0]?.length || 10}, 1fr)`,
+                  gap: '1px',
+                  userSelect: 'none',
+                  touchAction: 'none',
+                  position: 'relative'
+                }}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
+                {grid.map((row: string[], rowIndex: number) =>
+                  row.map((letter: string, colIndex: number) => (
+                    <Box
+                      key={`${rowIndex}-${colIndex}`}
+                      data-cell={`${rowIndex}-${colIndex}`}
+                      sx={getCellStyle(rowIndex, colIndex)}
+                      onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                      onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, rowIndex, colIndex)}
+                    >
+                      {letter}
+                    </Box>
+                  ))
+                )}
+              </Box>
+            </Paper>
+          </Box>
+        </Box>
+
+        {/* Game Over Dialog */}
+        <Dialog open={gameOver} maxWidth="sm" fullWidth>
+          <DialogTitle>
+            <Box textAlign="center">
+              <EmojiEvents sx={{ fontSize: 48, color: '#ff5722', mb: 1 }} />
+              <Typography variant="h4" component="div">
+                Game Over!
+              </Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box textAlign="center">
+              <Typography variant="h5" gutterBottom>
+                Final Score: {score.toLocaleString()}
+              </Typography>
+              <Typography variant="h6" gutterBottom>
+                Words Found: {wordsFound}/10
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {wordsFound >= 8 ? 'Excellent work!' : 
+                 wordsFound >= 5 ? 'Good job!' : 
+                 'Keep practicing!'}
+              </Typography>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+            <Button
+              variant="contained"
+              onClick={handleRestart}
+              startIcon={<Refresh />}
+              sx={{ bgcolor: '#ff5722', '&:hover': { bgcolor: '#d84315' } }}
+            >
+              Play Again
+            </Button>
+            <Button variant="outlined" onClick={handleBack}>
+              Back to Hub
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    )
+  }
+
+  // Desktop layout (unchanged)
   if (!gameStarted) {
     return (
       <Container 
         maxWidth="md" 
-        sx={{ 
-          py: 4,
-          minHeight: '100vh',
+        sx={{
+          py: isMobile ? 2 : 4,
+          px: isMobile ? 2 : undefined,
+          minHeight: isMobile ? 'auto' : '100vh',
+          height: isMobile ? 'auto' : undefined,
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
-          ...(isMobile && {
-            py: 2,
-            px: 2,
-            minHeight: 'auto',
-            height: 'auto'
-          })
+          overflowY: 'auto'
         }}
       >
         <AppBar position="static" sx={{ mb: 4, borderRadius: 2 }}>
@@ -639,25 +929,33 @@ export const OneWordRushPage = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      <AppBar position="static" sx={{ mb: 3, borderRadius: 2 }}>
-        <Toolbar>
-          <IconButton edge="start" color="inherit" onClick={handleBack}>
-            <ArrowBack />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            One Word Rush
-          </Typography>
-          <Button color="inherit" onClick={handleRestart} startIcon={<Refresh />}>
-            Restart
-          </Button>
-        </Toolbar>
-      </AppBar>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton onClick={handleBack} sx={{ mr: 2 }}>
+          <ArrowBack />
+        </IconButton>
+        <Typography variant="h3" component="h1">
+          One Word Rush
+        </Typography>
+      </Box>
 
       <Grid container spacing={3}>
         {/* Game Stats */}
         <Grid item xs={12}>
           <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h5" component="h2">
+                Game In Progress
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleRestart}
+                startIcon={<Refresh />}
+                sx={{ bgcolor: '#ff5722', '&:hover': { bgcolor: '#d84315' } }}
+              >
+                Restart
+              </Button>
+            </Box>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={3}>
                 <Typography variant="h6" color="primary">
@@ -737,7 +1035,7 @@ export const OneWordRushPage = () => {
                     data-cell={`${rowIndex}-${colIndex}`}
                     sx={getCellStyle(rowIndex, colIndex)}
                     onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
+                    onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, rowIndex, colIndex)}
                   >
                     {letter}
                   </Box>
