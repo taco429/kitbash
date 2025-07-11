@@ -195,23 +195,7 @@ export const WordSearchHubPage = () => {
                   {gameType.description}
                 </Typography>
 
-                {/* Features */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-                    Features:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {gameType.features.map((feature, index) => (
-                      <Chip 
-                        key={index}
-                        label={feature}
-                        variant="outlined"
-                        size="small"
-                        sx={{ fontSize: '0.75rem' }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
+
 
                 {/* Action Button */}
                 <Button
