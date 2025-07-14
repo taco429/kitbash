@@ -2,25 +2,8 @@ import React, { useEffect, useRef, useCallback } from 'react'
 import {
   Container,
   Typography,
-  Paper,
-  Box,
-  Button,
-  ButtonGroup,
   Grid,
-  Card,
-  CardContent,
-  LinearProgress,
-  Chip,
-  IconButton
 } from '@mui/material'
-import {
-  PlayArrow,
-  Pause,
-  Refresh,
-  Security,
-  Speed,
-  Whatshot
-} from '@mui/icons-material'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import {
   startGame,
@@ -42,6 +25,7 @@ import {
   Enemy,
   Projectile 
 } from '../types/towerDefense'
+import { GameCanvas, GameControls, GameStats, TowerSelector } from '../components/games/tower-defense'
 
 export const TowerDefensePage = () => {
   const dispatch = useAppDispatch()
@@ -235,177 +219,47 @@ export const TowerDefensePage = () => {
       <Grid container spacing={3}>
         {/* Game Canvas */}
         <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Game Board</Typography>
-              <ButtonGroup variant="contained" size="small">
-                <Button
-                  onClick={handleStartGame}
-                  disabled={gameState.isRunning && !gameState.isPaused}
-                  startIcon={<PlayArrow />}
-                >
-                  Start
-                </Button>
-                <Button
-                  onClick={handlePauseGame}
-                  disabled={!gameState.isRunning}
-                  startIcon={<Pause />}
-                >
-                  {gameState.isPaused ? 'Resume' : 'Pause'}
-                </Button>
-                <Button
-                  onClick={handleResetGame}
-                  startIcon={<Refresh />}
-                >
-                  Reset
-                </Button>
-              </ButtonGroup>
-            </Box>
-
-            <canvas
-              ref={canvasRef}
-              width={GAME_CONFIG.CANVAS_WIDTH}
-              height={GAME_CONFIG.CANVAS_HEIGHT}
-              onClick={handleCanvasClick}
-              style={{
-                border: '2px solid #ccc',
-                borderRadius: '8px',
-                cursor: gameState.selectedTowerType ? 'crosshair' : 'default',
-                maxWidth: '100%',
-                height: 'auto'
-              }}
-            />
-          </Paper>
+          <GameCanvas
+            ref={canvasRef}
+            width={GAME_CONFIG.CANVAS_WIDTH}
+            height={GAME_CONFIG.CANVAS_HEIGHT}
+            onClick={handleCanvasClick}
+            selectedTowerType={gameState.selectedTowerType}
+            title="Game Board"
+            headerActions={
+              <GameControls
+                isRunning={gameState.isRunning}
+                isPaused={gameState.isPaused}
+                onStart={handleStartGame}
+                onPause={handlePauseGame}
+                onReset={handleResetGame}
+              />
+            }
+          />
         </Grid>
 
         {/* Game UI */}
         <Grid item xs={12} md={4}>
           {/* Game Stats */}
-          <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Game Stats
-            </Typography>
-            
-            <Box sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Score:</Typography>
-                <Typography variant="body2" fontWeight="bold">{gameState.score}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Money:</Typography>
-                <Typography variant="body2" fontWeight="bold" color="success.main">
-                  ${gameState.money}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Lives:</Typography>
-                <Typography variant="body2" fontWeight="bold" color="error.main">
-                  {gameState.lives}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2">Level:</Typography>
-                <Typography variant="body2" fontWeight="bold">{gameState.level}</Typography>
-              </Box>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" gutterBottom>
-                Health
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={(gameState.lives / GAME_CONFIG.INITIAL_LIVES) * 100}
-                color={gameState.lives > 10 ? 'success' : gameState.lives > 5 ? 'warning' : 'error'}
-              />
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip
-                label={`Enemies: ${gameState.enemies.length}`}
-                size="small"
-                color="error"
-                variant="outlined"
-              />
-              <Chip
-                label={`Towers: ${gameState.towers.length}`}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-              <Chip
-                label={`Projectiles: ${gameState.projectiles.length}`}
-                size="small"
-                color="warning"
-                variant="outlined"
-              />
-            </Box>
-          </Paper>
+          <GameStats
+            score={gameState.score}
+            money={gameState.money}
+            lives={gameState.lives}
+            level={gameState.level}
+            maxLives={GAME_CONFIG.INITIAL_LIVES}
+            enemies={gameState.enemies.length}
+            towers={gameState.towers.length}
+            projectiles={gameState.projectiles.length}
+          />
 
           {/* Tower Selection */}
-          <Paper elevation={3} sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Towers
-            </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              Select a tower type and click on the game board to place it
-            </Typography>
-
-            <Grid container spacing={1}>
-              {Object.values(TOWER_TYPES).map((towerType) => (
-                <Grid item xs={12} key={towerType.type}>
-                  <Card
-                    variant={gameState.selectedTowerType === towerType.type ? "elevation" : "outlined"}
-                    sx={{
-                      cursor: gameState.money >= towerType.cost ? 'pointer' : 'not-allowed',
-                      opacity: gameState.money >= towerType.cost ? 1 : 0.5,
-                      border: gameState.selectedTowerType === towerType.type ? 2 : 1,
-                      borderColor: gameState.selectedTowerType === towerType.type ? towerType.color : 'divider'
-                    }}
-                    onClick={() => gameState.money >= towerType.cost && handleTowerSelect(towerType.type)}
-                  >
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          sx={{ 
-                            bgcolor: towerType.color,
-                            color: 'white',
-                            '&:hover': { bgcolor: towerType.color }
-                          }}
-                        >
-                          {towerType.type === 'basic' && <Security />}
-                          {towerType.type === 'fast' && <Speed />}
-                          {towerType.type === 'heavy' && <Whatshot />}
-                        </IconButton>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle2">
-                            {towerType.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ${towerType.cost} • DMG: {towerType.damage} • RNG: {towerType.range}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-
-            {gameState.selectedTowerType && (
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => dispatch(selectTowerType(null))}
-                  fullWidth
-                >
-                  Cancel Selection
-                </Button>
-              </Box>
-            )}
-          </Paper>
+          <TowerSelector
+            towerTypes={Object.values(TOWER_TYPES)}
+            selectedTowerType={gameState.selectedTowerType}
+            money={gameState.money}
+            onTowerSelect={handleTowerSelect}
+            onCancelSelection={() => dispatch(selectTowerType(null))}
+          />
         </Grid>
       </Grid>
     </Container>
