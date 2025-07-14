@@ -1,5 +1,5 @@
 import { Box, Paper } from '@mui/material'
-import { useRef, ReactNode } from 'react'
+import { useRef, ReactNode, RefObject } from 'react'
 
 interface GameGridProps {
   grid: string[][]
@@ -11,6 +11,8 @@ interface GameGridProps {
   onTouchMove: (event: React.TouchEvent) => void
   onTouchEnd: (event: React.TouchEvent) => void
   selectionLineRenderer?: () => ReactNode
+  foundWordLineRenderer?: () => ReactNode
+  gridRef?: RefObject<HTMLDivElement>
 }
 
 export const GameGrid = ({
@@ -23,8 +25,11 @@ export const GameGrid = ({
   onTouchMove,
   onTouchEnd,
   selectionLineRenderer,
+  foundWordLineRenderer,
+  gridRef: externalGridRef,
 }: GameGridProps) => {
-  const gridRef = useRef<HTMLDivElement>(null)
+  const internalGridRef = useRef<HTMLDivElement>(null)
+  const gridRef = externalGridRef || internalGridRef
 
   return (
     <Paper
@@ -66,6 +71,7 @@ export const GameGrid = ({
           ))
         )}
         {selectionLineRenderer && selectionLineRenderer()}
+        {foundWordLineRenderer && foundWordLineRenderer()}
       </Box>
     </Paper>
   )

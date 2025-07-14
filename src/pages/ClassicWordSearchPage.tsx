@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { 
   Card, 
   CardContent, 
@@ -67,10 +67,10 @@ export const ClassicWordSearchPage = () => {
     onSelectionStart: (cell) => {
       dispatch(startSelection({ row: cell.row, col: cell.col }))
     },
-    onSelectionUpdate: (cells, currentCell) => {
+    onSelectionUpdate: (_, currentCell) => {
       dispatch(updateSelection({ row: currentCell.row, col: currentCell.col }))
     },
-    onSelectionEnd: (cells) => {
+    onSelectionEnd: () => {
       dispatch(endSelection())
     }
   })
@@ -639,6 +639,7 @@ export const ClassicWordSearchPage = () => {
                   onTouchStart={dragSelection.handleTouchStart}
                   onTouchMove={dragSelection.handleTouchMove}
                   onTouchEnd={dragSelection.handleTouchEnd}
+                  gridRef={dragSelection.gridRef}
                   selectionLineRenderer={() => (
                     <>
                       {foundWordLineRenderer.renderFoundWordLines()}

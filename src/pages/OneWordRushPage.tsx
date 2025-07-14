@@ -33,7 +33,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { GameGrid, GameStats, CurrentWordDisplay, GameOverDialog } from '../components/games/word-search'
 import { GameButton } from '../components/shared'
-import { useDragSelection, useCellStyles, useSelectionLineRenderer } from '../hooks'
+import { useDragSelection, useCellStyles, useSelectionLineRenderer, useFoundWordLineRenderer } from '../hooks'
 
 interface WordPosition {
   word: string
@@ -61,16 +61,10 @@ interface GameState {
   
   // UI state
   foundWordPositions: WordPosition[]
-  selectedCells: Array<{ row: number; col: number }>
   
   // Word location flash effect
   wordLocationCells: Array<{ row: number; col: number }>
   flashPhase: number
-  
-  // Selection state
-  isDragging: boolean
-  startCell: { row: number; col: number } | null
-  currentCell: { row: number; col: number } | null
 }
 
 type GameAction =
@@ -102,12 +96,8 @@ const initialState: GameState = {
   maxCombo: 0,
   timeLeft: 30,
   foundWordPositions: [],
-  selectedCells: [],
   wordLocationCells: [],
-  flashPhase: 0,
-  isDragging: false,
-  startCell: null,
-  currentCell: null
+  flashPhase: 0
 }
 
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -133,10 +123,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         combo: newCombo,
         maxCombo: Math.max(state.maxCombo, newCombo),
         foundWordPositions: [...state.foundWordPositions, action.payload.wordPosition],
-        selectedCells: [], // Clear selection immediately
-        isDragging: false,
-        startCell: null,
-        currentCell: null
+        wordLocationCells: [], // Clear selection immediately
+        flashPhase: 0
       }
     
     case 'NEXT_WORD':
@@ -156,10 +144,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         grid: action.payload.grid,
         timeLeft: 30,
         foundWordPositions: [], // Clear previous word highlighting
-        selectedCells: [],
-        isDragging: false,
-        startCell: null,
-        currentCell: null
+        wordLocationCells: [],
+        flashPhase: 0
       }
     
     case 'GAME_COMPLETE':
@@ -214,32 +200,15 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     
     case 'START_SELECTION':
       if (state.phase !== 'playing') return state
-      return {
-        ...state,
-        isDragging: true,
-        startCell: { row: action.payload.row, col: action.payload.col },
-        currentCell: { row: action.payload.row, col: action.payload.col },
-        selectedCells: [{ row: action.payload.row, col: action.payload.col }]
-      }
+      return state // Selection is handled by useDragSelection
     
     case 'UPDATE_SELECTION':
-      if (state.phase !== 'playing' || !state.isDragging) return state
-      return {
-        ...state,
-        currentCell: action.payload.currentCell,
-        selectedCells: action.payload.cells
-      }
+      if (state.phase !== 'playing') return state
+      return state // Selection is handled by useDragSelection
     
     case 'END_SELECTION':
       if (state.phase !== 'playing') return state
-      return {
-        ...state,
-        isDragging: false,
-        startCell: null,
-        currentCell: null,
-        selectedCells: [],
-        combo: 0 // Reset combo on failed selection
-      }
+      return state // Selection is handled by useDragSelection
     
     case 'RESET_GAME':
       return initialState
@@ -250,17 +219,73 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 }
 
 export const OneWordRushPage = () => {
+  const [gameState, dispatch] = useReducer(gameReducer, initialState)
   const navigate = useNavigate()
-  const isMobile = useMediaQuery(useTheme().breakpoints.down('md'))
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+
+  // Drag selection hook
+  const {
+    dragState,
+    gridRef,
+    handleMouseDown: onDragMouseDown,
+    handleMouseMove: onDragMouseMove,
+    handleMouseUp: onDragMouseUp,
+    handleTouchStart: onDragTouchStart,
+    handleTouchMove: onDragTouchMove,
+    handleTouchEnd: onDragTouchEnd
+  } = useDragSelection({
+    grid: gameState.grid,
+    onSelectionEnd: (cells: Array<{ row: number; col: number }>) => {
+      const wordFound = checkWordFoundWithCells(cells)
+      if (!wordFound) {
+        // Reset combo if word not found
+        dispatch({ type: 'END_SELECTION' })
+      }
+    },
+    onSelectionUpdate: () => {
+      // Optional: Handle selection changes if needed
+    }
+  })
+
+  // Extract drag state properties for easier access
+  const { isDragging, startCell, currentCell, selectedCells } = dragState
+  
+  // Cell styles hook
+  const { getCellStyle } = useCellStyles({
+    isMobile,
+    selectedCells,
+    foundWordCells: gameState.foundWordPositions.flatMap(wordPos => wordPos.cells),
+    isDragging,
+    startCell,
+    currentCell,
+    flashingCells: gameState.wordLocationCells,
+    isFlashing: gameState.phase === 'showingWordLocation' && gameState.flashPhase % 2 === 1
+  })
+
+  // Line rendering hooks
+  const { renderSelectionLine } = useSelectionLineRenderer({
+    grid: gameState.grid,
+    isDragging,
+    startCell,
+    currentCell,
+    isMobile,
+    strokeColor: "rgba(255, 87, 34, 0.8)",
+    strokeWidth: isMobile ? 28 : 46
+  })
+
+  const { renderFoundWordLines } = useFoundWordLineRenderer({
+    grid: gameState.grid,
+    foundWordPositions: gameState.foundWordPositions,
+    isMobile,
+    strokeColor: "rgba(76, 175, 80, 0.6)",
+    strokeWidth: isMobile ? 24 : 36
+  })
   
   // Use reducer for atomic state management
-  const [gameState, dispatch] = useReducer(gameReducer, initialState)
-  
-  // Refs for cleanup
   const timerRef = useRef<number | null>(null)
   const flashRef = useRef<number | null>(null)
   const transitionRef = useRef<number | null>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
   
   // Word lists for different difficulties
   const easyWords = [
@@ -441,39 +466,32 @@ export const OneWordRushPage = () => {
     }
   }, [getRandomWords, generateRandomGrid, placeWordInGrid])
 
-  const checkWordFound = useCallback(() => {
-    if (gameState.selectedCells.length === 0 || gameState.phase !== 'playing') return false
+  // Word found check function that takes selectedCells as parameter
+  const checkWordFoundWithCells = useCallback((selectedCells: Array<{ row: number; col: number }>) => {
+    if (selectedCells.length === 0 || gameState.phase !== 'playing') return false
     
-    const selectedWord = gameState.selectedCells
+    const selectedWord = selectedCells
       .map(cell => gameState.grid[cell.row][cell.col])
       .join('')
     
-    const reversedWord = selectedWord.split('').reverse().join('')
-    
-    if (selectedWord === gameState.currentWord || reversedWord === gameState.currentWord) {
-      const timeBonus = Math.max(0, gameState.timeLeft) * 10
-      const comboBonus = gameState.combo * 50
-      const speedBonus = gameState.timeLeft > 20 ? 200 : gameState.timeLeft > 10 ? 100 : 50
-      const totalPoints = 100 + timeBonus + comboBonus + speedBonus
+    if (selectedWord === gameState.currentWord) {
+      // Award more points for longer words and combo multiplier
+      const basePoints = gameState.currentWord.length * 10
+      const comboMultiplier = Math.max(1, gameState.combo * 0.5)
+      const timeBonus = Math.floor(gameState.timeLeft * 2)
+      const totalPoints = Math.floor(basePoints * comboMultiplier) + timeBonus
       
       const newFoundWord: WordPosition = {
         word: gameState.currentWord,
-        cells: [...gameState.selectedCells]
+        cells: [...selectedCells]
       }
       
-      dispatch({
-        type: 'WORD_FOUND',
-        payload: {
-          points: totalPoints,
-          wordPosition: newFoundWord
-        }
-      })
-      
+      dispatch({ type: 'WORD_FOUND', payload: { points: totalPoints, wordPosition: newFoundWord } })
       return true
     }
     
     return false
-  }, [gameState.selectedCells, gameState.grid, gameState.currentWord, gameState.timeLeft, gameState.combo, gameState.phase])
+  }, [gameState.grid, gameState.currentWord, gameState.timeLeft, gameState.combo, gameState.phase])
 
   const generateNextPuzzle = useCallback(() => {
     const nextIndex = gameState.currentWordIndex + 1
@@ -595,121 +613,32 @@ export const OneWordRushPage = () => {
   }, [])
 
   // Enhanced getCellFromCoordinates for smooth tracking (like Classic Word Search)
-  const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
-    if (!gridRef.current) return null
-    
-    // Use elementFromPoint to directly find which cell element is under the coordinates
-    const element = document.elementFromPoint(clientX, clientY)
-    
-    if (element && element.hasAttribute('data-cell')) {
-      const cellData = element.getAttribute('data-cell')
-      if (cellData) {
-        const [row, col] = cellData.split('-').map(Number)
-        if (row >= 0 && row < gameState.grid.length && col >= 0 && col < gameState.grid[0].length) {
-          return { row, col }
-        }
-      }
-    }
-    
-    return null
-  }, [gameState.grid])
-
-  const handleSelectionStart = (row: number, col: number) => {
-    dispatch({ type: 'START_SELECTION', payload: { row, col } })
-  }
-
-  const handleSelectionMove = (clientX: number, clientY: number) => {
-    if (!gameState.isDragging || !gameState.startCell) return
-
-    const cell = getCellFromCoordinates(clientX, clientY)
-    if (cell && (!gameState.currentCell || cell.row !== gameState.currentCell.row || cell.col !== gameState.currentCell.col)) {
-      const deltaRow = cell.row - gameState.startCell.row
-      const deltaCol = cell.col - gameState.startCell.col
-      
-      if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
-        // Valid direction - calculate cells in line from start to current
-        const newSelectedCells = getLineCells(gameState.startCell, cell)
-        dispatch({ type: 'UPDATE_SELECTION', payload: { cells: newSelectedCells, currentCell: cell } })
-      } else {
-        // Invalid direction - only keep the start cell selected
-        dispatch({ type: 'UPDATE_SELECTION', payload: { cells: [gameState.startCell], currentCell: cell } })
-      }
-    }
-  }
-
-  const handleSelectionEnd = () => {
-    if (gameState.isDragging) {
-      // Check if word is found BEFORE clearing state
-      const wordFound = checkWordFound()
-      
-      if (!wordFound) {
-        // Reset combo if word not found
-        dispatch({ type: 'END_SELECTION' })
-      }
-    }
-  }
-
-  const getLineCells = (start: { row: number; col: number }, end: { row: number; col: number }) => {
-    const cells: Array<{ row: number; col: number }> = []
-    
-    const deltaRow = end.row - start.row
-    const deltaCol = end.col - start.col
-    
-    // Only allow straight lines (horizontal, vertical, diagonal)
-    if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
-      const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
-      if (steps === 0) {
-        cells.push(start)
-      } else {
-        const stepRow = deltaRow / steps
-        const stepCol = deltaCol / steps
-        
-        for (let i = 0; i <= steps; i++) {
-          cells.push({
-            row: start.row + i * stepRow,
-            col: start.col + i * stepCol
-          })
-        }
-      }
-    }
-    
-    return cells
-  }
+  // Cell selection and coordinate handling is now managed by the drag selection hook
 
   // Mouse handlers
   const handleMouseDown = (row: number, col: number) => {
-    handleSelectionStart(row, col)
+    onDragMouseDown(row, col)
   }
 
-
-
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (gameState.isDragging) {
-      handleSelectionMove(event.clientX, event.clientY)
-    }
+    onDragMouseMove(event)
   }
 
   const handleMouseUp = () => {
-    handleSelectionEnd()
+    onDragMouseUp()
   }
 
   // Touch handlers - improved like Classic Word Search
   const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
-    event.preventDefault()
-    handleSelectionStart(row, col)
+    onDragTouchStart(event, row, col)
   }
 
   const handleTouchMove = (event: React.TouchEvent) => {
-    event.preventDefault()
-    if (gameState.isDragging && event.touches.length > 0) {
-      const touch = event.touches[0]
-      handleSelectionMove(touch.clientX, touch.clientY)
-    }
+    onDragTouchMove(event)
   }
 
   const handleTouchEnd = (event: React.TouchEvent) => {
-    event.preventDefault()
-    handleSelectionEnd()
+    onDragTouchEnd(event)
   }
 
   // Prevent body scrolling on mobile word search (only during game)
@@ -727,186 +656,9 @@ export const OneWordRushPage = () => {
     }
   }, [isMobile, gameState.phase])
 
-  // Global event handlers - improved cleanup like Classic Word Search
-  useEffect(() => {
-    const handleGlobalEnd = () => {
-      if (gameState.isDragging) {
-        dispatch({ type: 'END_SELECTION' })
-      }
-    }
+  // Global event handlers are now managed by the drag selection hook
 
-    // Also listen for mouse leave events to clear selection
-    const handleMouseLeave = () => {
-      if (gameState.isDragging) {
-        dispatch({ type: 'END_SELECTION' })
-      }
-    }
-
-    document.addEventListener('mouseup', handleGlobalEnd)
-    document.addEventListener('touchend', handleGlobalEnd)
-    document.addEventListener('mouseleave', handleMouseLeave)
-    
-    return () => {
-      document.removeEventListener('mouseup', handleGlobalEnd)
-      document.removeEventListener('touchend', handleGlobalEnd)
-      document.removeEventListener('mouseleave', handleMouseLeave)
-    }
-  }, [gameState.isDragging])
-
-  const isCellSelected = (row: number, col: number) => {
-    return gameState.selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
-  }
-
-  const isCellInFoundWord = (row: number, col: number) => {
-    return gameState.foundWordPositions.some((wordPosition: WordPosition) =>
-      wordPosition.cells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
-    )
-  }
-
-  const isCellInCurrentPath = (row: number, col: number): boolean => {
-    if (!gameState.currentCell || !gameState.startCell || !gameState.isDragging) return false
-    
-    const deltaRow = gameState.currentCell.row - gameState.startCell.row
-    const deltaCol = gameState.currentCell.col - gameState.startCell.col
-    
-    // Only show path for valid directions (horizontal, vertical, diagonal)
-    if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
-      const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
-      if (steps === 0) return row === gameState.startCell.row && col === gameState.startCell.col
-      
-      const stepRow = deltaRow / steps
-      const stepCol = deltaCol / steps
-      
-      for (let i = 0; i <= steps; i++) {
-        const checkRow = gameState.startCell.row + i * stepRow
-        const checkCol = gameState.startCell.col + i * stepCol
-        if (checkRow === row && checkCol === col) {
-          return true
-        }
-      }
-    }
-    
-    return false
-  }
-
-  const getCellStyle = (row: number, col: number) => {
-    const isSelected = isCellSelected(row, col)
-    const isInCurrentPath = isCellInCurrentPath(row, col)
-    const isInFoundWord = isCellInFoundWord(row, col)
-    const isStartCell = gameState.startCell && gameState.startCell.row === row && gameState.startCell.col === col
-    const isCurrentCell = gameState.currentCell && gameState.currentCell.row === row && gameState.currentCell.col === col
-    const isDraggingStart = gameState.isDragging && isStartCell
-    const isDraggingCurrent = gameState.isDragging && isCurrentCell && !isStartCell
-    const isWordLocationCell = gameState.wordLocationCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
-    
-    const cellSize = isMobile ? '8vw' : '40px'
-    const fontSize = isMobile ? '4vw' : '16px'
-    
-    const baseStyle = {
-      width: cellSize,
-      height: cellSize,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px solid #ccc',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      userSelect: 'none' as const,
-      fontSize: fontSize,
-      fontWeight: 'bold',
-      transition: 'all 0.1s ease',
-      touchAction: 'none',
-      margin: isMobile ? '1px' : '2px',
-      boxSizing: 'border-box' as const,
-      position: 'relative' as const,
-      zIndex: 1
-    }
-
-    // Flash effect for word location when time runs out (highest priority)
-    if (gameState.phase === 'showingWordLocation' && isWordLocationCell) {
-      const isFlashOn = gameState.flashPhase % 2 === 1 // Flash on odd phases
-      return {
-        ...baseStyle,
-        backgroundColor: isFlashOn ? '#8b0000' : '#dc143c', // Dark red flashing
-        color: 'white',
-        border: '3px solid #8b0000',
-        borderRadius: '8px',
-        boxShadow: isFlashOn ? '0 0 15px rgba(139, 0, 0, 0.8)' : '0 0 10px rgba(220, 20, 60, 0.6)',
-        transform: isFlashOn ? 'scale(1.1)' : 'scale(1.05)',
-        zIndex: 15 // Highest priority
-      }
-    }
-
-    // Special styling for start cell during dragging
-    if (isDraggingStart) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ff5722',
-        color: 'white',
-        border: '3px solid #d84315',
-        borderRadius: '10px',
-        boxShadow: '0 0 12px rgba(255, 87, 34, 0.6)',
-        transform: 'scale(1.1)',
-        zIndex: 10
-      }
-    }
-
-    // Special styling for current cell during dragging
-    if (isDraggingCurrent) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ff7043',
-        color: 'white',
-        border: '3px solid #ff5722',
-        borderRadius: '10px',
-        boxShadow: '0 0 10px rgba(255, 112, 67, 0.5)',
-        transform: 'scale(1.05)',
-        zIndex: 9
-      }
-    }
-
-    if (isSelected) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ff5722',
-        color: 'white',
-        border: '2px solid #d84315',
-        borderRadius: '8px',
-        boxShadow: '0 0 8px rgba(255, 87, 34, 0.5)',
-        zIndex: 6
-      }
-    }
-
-    if (isInCurrentPath) {
-      return {
-        ...baseStyle,
-        backgroundColor: 'rgba(255, 87, 34, 0.4)',
-        color: '#d84315',
-        border: '2px solid #ff5722',
-        borderRadius: '8px',
-        boxShadow: '0 0 5px rgba(255, 87, 34, 0.4)',
-        zIndex: 8
-      }
-    }
-
-    if (isInFoundWord) {
-      return {
-        ...baseStyle,
-        backgroundColor: 'rgba(76, 175, 80, 0.3)',
-        color: '#2e7d32',
-        border: '1px solid #4caf50',
-        zIndex: 2
-      }
-    }
-
-    return {
-      ...baseStyle,
-      backgroundColor: 'white',
-      '&:hover': {
-        backgroundColor: '#f5f5f5'
-      }
-    }
-  }
+  // Cell styling is now handled by the useCellStyles hook
 
   const handleBack = () => {
     navigate('/word-search')
@@ -919,73 +671,7 @@ export const OneWordRushPage = () => {
 
 
 
-  // Visual line rendering during selection (like Classic Word Search)
-  const renderSelectionLine = () => {
-    if (!gameState.isDragging || !gameState.startCell || !gameState.currentCell || !gridRef.current) return null
-    
-    // Match One Word Rush actual grid layout with CSS gap
-    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
-    const gap = isMobile ? 1 : 2 // Match actual CSS grid gap
-    const cellWithGap = cellSize + gap // Total space per cell including gap
-    const gridPadding = isMobile ? 16 : 16 // Match Paper padding
-    
-    // Calculate coordinates for line drawing - perfectly centered on cells
-    // Adjust offset to move anchor points more up and left for perfect centering
-    const horizontalOffset = gap * 1.4 // Move even more to the left (twice the last adjustment)
-    const verticalOffset = gap * 1.4   // Move even more up (twice the last adjustment)
-    const startX = gameState.startCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
-    const startY = gameState.startCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
-    const endX = gameState.currentCell.col * cellWithGap + cellSize / 2 + gridPadding - horizontalOffset
-    const endY = gameState.currentCell.row * cellWithGap + cellSize / 2 + gridPadding - verticalOffset
-    
-    // Check if direction is valid
-    const deltaRow = gameState.currentCell.row - gameState.startCell.row
-    const deltaCol = gameState.currentCell.col - gameState.startCell.col
-    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
-    
-    const gridWidth = gameState.grid[0].length * cellWithGap + gridPadding * 2
-    const gridHeight = gameState.grid.length * cellWithGap + gridPadding * 2
-    const pathWidth = cellSize * 1.15 // Wider than cell size (115% vs 60% before)
-    
-    const validColor = isValidDirection ? "rgba(255, 87, 34, 0.8)" : "rgba(255, 152, 0, 0.6)"
-    
-    return (
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 7 // Above path cells but below start/end cells
-        }}
-      >
-        <svg
-          width={gridWidth}
-          height={gridHeight}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            pointerEvents: 'none'
-          }}
-        >
-          <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
-            stroke={validColor}
-            strokeWidth={pathWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.9"
-          />
-        </svg>
-      </Box>
-    )
-  }
+  // Line rendering is now handled by the rendering hooks
 
   // Mobile full-screen layout
   if (isMobile) {
@@ -1634,6 +1320,8 @@ export const OneWordRushPage = () => {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             selectionLineRenderer={renderSelectionLine}
+            foundWordLineRenderer={renderFoundWordLines}
+            gridRef={gridRef}
           />
         </Grid>
       </Grid>
