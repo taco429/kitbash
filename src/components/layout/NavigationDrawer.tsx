@@ -7,6 +7,7 @@ import {
   FormatListBulleted,
   Games,
   Search,
+  Casino,
 } from '@mui/icons-material'
 import { NavigationItem } from './NavigationItem'
 
@@ -27,6 +28,7 @@ const navigationItems: NavigationItemData[] = [
   { text: 'Todo List Demo', icon: <FormatListBulleted />, path: '/todos' },
   { text: 'Tower Defense', icon: <Games />, path: '/tower-defense' },
   { text: 'Word Search', icon: <Search />, path: '/word-search' },
+  { text: 'Card Games', icon: <Casino />, path: '/card-games' },
 ]
 
 export const NavigationDrawer = ({ onNavigate }: NavigationDrawerProps) => {

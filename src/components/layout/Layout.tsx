@@ -15,7 +15,6 @@ const drawerWidth = 240
 interface LayoutProps {
   children: React.ReactNode
 }
-
 export const Layout = ({ children }: LayoutProps) => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
