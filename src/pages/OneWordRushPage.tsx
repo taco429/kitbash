@@ -31,6 +31,8 @@ import {
   Speed as SpeedIcon
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
+import { GameGrid, GameStats, CurrentWordDisplay, GameOverDialog } from '../components/games/word-search'
+import { GameButton } from '../components/shared'
 
 interface WordPosition {
   word: string
@@ -914,15 +916,7 @@ export const OneWordRushPage = () => {
     startGame()
   }
 
-  const getProgressPercentage = () => {
-    return (gameState.timeLeft / 30) * 100
-  }
 
-  const getProgressColor = () => {
-    if (gameState.timeLeft > 20) return 'success'
-    if (gameState.timeLeft > 10) return 'warning'
-    return 'error'
-  }
 
   // Visual line rendering during selection (like Classic Word Search)
   const renderSelectionLine = () => {
@@ -1168,8 +1162,11 @@ export const OneWordRushPage = () => {
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={getProgressPercentage()}
-                    color={getProgressColor()}
+                    value={(gameState.timeLeft / 30) * 100}
+                    color={
+                      gameState.timeLeft > 20 ? 'success' :
+                      gameState.timeLeft > 10 ? 'warning' : 'error'
+                    }
                     sx={{ height: 6, borderRadius: 3 }}
                   />
                 </Box>
@@ -1556,10 +1553,9 @@ export const OneWordRushPage = () => {
               </Typography>
             </Box>
 
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<PlayArrow />}
+            <GameButton
+              variant="primary"
+              icon={<PlayArrow />}
               onClick={startGame}
               sx={{
                 fontSize: '1.2rem',
@@ -1570,7 +1566,7 @@ export const OneWordRushPage = () => {
               }}
             >
               Start Rush
-            </Button>
+            </GameButton>
           </CardContent>
         </Card>
       </Container>
@@ -1596,145 +1592,60 @@ export const OneWordRushPage = () => {
               <Typography variant="h5" component="h2">
                 Game In Progress
               </Typography>
-              <Button
-                variant="contained"
+              <GameButton
+                variant="primary"
+                icon={<Refresh />}
                 onClick={handleRestart}
-                startIcon={<Refresh />}
                 sx={{ bgcolor: '#ff5722', '&:hover': { bgcolor: '#d84315' } }}
               >
                 Restart
-              </Button>
+              </GameButton>
             </Box>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={3}>
-                <Typography variant="h6" color="primary">
-                  Score: {gameState.score.toLocaleString()}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Typography variant="h6">
-                  Words: {gameState.wordsFound}/10
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Typography variant="h6">
-                  Combo: {gameState.combo}x
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Box>
-                  <Typography variant="body2" gutterBottom>
-                    Time Left: {gameState.timeLeft}s
-                  </Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={getProgressPercentage()}
-                    color={getProgressColor()}
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
+            <GameStats
+              score={gameState.score}
+              wordsFound={gameState.wordsFound}
+              totalWords={gameState.wordQueue.length}
+              combo={gameState.combo}
+              timeLeft={gameState.timeLeft}
+              maxTime={30}
+            />
           </Paper>
         </Grid>
 
         {/* Current Word */}
         <Grid item xs={12}>
-          <Card elevation={3} sx={{ textAlign: 'center', p: 3, mb: 2 }}>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#ff5722' }}>
-              Find: {gameState.currentWord}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Word {gameState.currentWordIndex + 1} of {gameState.wordQueue.length}
-            </Typography>
-          </Card>
+          <CurrentWordDisplay
+            currentWord={gameState.currentWord}
+            currentIndex={gameState.currentWordIndex}
+            totalWords={gameState.wordQueue.length}
+          />
         </Grid>
 
         {/* Game Grid */}
         <Grid item xs={12}>
-          <Paper
-            elevation={3}
-            sx={{
-              p: 2,
-              display: 'flex',
-              justifyContent: 'center',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <Box
-              ref={gridRef}
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${gameState.grid[0]?.length || 10}, 1fr)`,
-                gap: '2px',
-                userSelect: 'none',
-                touchAction: 'none',
-                position: 'relative'
-              }}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              {gameState.grid.map((row: string[], rowIndex: number) =>
-                row.map((letter: string, colIndex: number) => (
-                  <Box
-                    key={`${rowIndex}-${colIndex}`}
-                    data-cell={`${rowIndex}-${colIndex}`}
-                    sx={getCellStyle(rowIndex, colIndex)}
-                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onTouchStart={(e: React.TouchEvent) => handleTouchStart(e, rowIndex, colIndex)}
-                  >
-                    {letter}
-                  </Box>
-                ))
-              )}
-              {renderSelectionLine()}
-            </Box>
-          </Paper>
+          <GameGrid
+            grid={gameState.grid}
+            getCellStyle={getCellStyle}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            selectionLineRenderer={renderSelectionLine}
+          />
         </Grid>
       </Grid>
 
       {/* Game Over Dialog */}
-      <Dialog open={gameState.phase === 'gameOver'} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box textAlign="center">
-            <EmojiEvents sx={{ fontSize: 48, color: '#ff5722', mb: 1 }} />
-            <Typography variant="h4" component="div">
-              Game Over!
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box textAlign="center">
-            <Typography variant="h5" gutterBottom>
-              Final Score: {gameState.score.toLocaleString()}
-            </Typography>
-            <Typography variant="h6" gutterBottom>
-              Words Found: {gameState.wordsFound}/10
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {gameState.wordsFound >= 8 ? 'Excellent work!' : 
-               gameState.wordsFound >= 5 ? 'Good job!' : 
-               'Keep practicing!'}
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
-          <Button
-            variant="contained"
-            onClick={handleRestart}
-            startIcon={<Refresh />}
-            sx={{ bgcolor: '#ff5722', '&:hover': { bgcolor: '#d84315' } }}
-          >
-            Play Again
-          </Button>
-          <Button variant="outlined" onClick={handleBack}>
-            Back to Hub
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <GameOverDialog
+        open={gameState.phase === 'gameOver'}
+        score={gameState.score}
+        wordsFound={gameState.wordsFound}
+        totalWords={gameState.wordQueue.length}
+        onRestart={handleRestart}
+        onBack={handleBack}
+      />
     </Container>
   )
 }

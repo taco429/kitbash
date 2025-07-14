@@ -21,7 +21,6 @@ import {
   Toolbar,
   IconButton,
   Fab,
-  Drawer,
   useTheme,
   useMediaQuery,
   Dialog,
@@ -35,7 +34,6 @@ import {
   Search, 
   ArrowBack,
   List as ListIcon,
-  Close as CloseIcon,
   PlayArrow,
   Home as HomeIcon,
   Timer as TimerIcon,
@@ -44,6 +42,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
+import { GameGrid, WordBank, GameTimer } from '../components/games/word-search'
+import { GameButton } from '../components/shared'
 
 export const ClassicWordSearchPage = () => {
   const dispatch = useAppDispatch()
@@ -72,12 +72,7 @@ export const ClassicWordSearchPage = () => {
     setGameStarted(true)
   }
 
-  const formatTimer = () => {
-    const min = minutes.toString().padStart(2, '0')
-    const sec = seconds.toString().padStart(2, '0')
-    const ms = Math.floor(milliseconds / 10).toString().padStart(2, '0')
-    return `${min}:${sec}:${ms}`
-  }
+
 
   useEffect(() => {
     // Start a new game when component mounts
@@ -132,7 +127,10 @@ export const ClassicWordSearchPage = () => {
   // Handle game won state
   useEffect(() => {
     if (gameWon && gameStarted) {
-      setFinalTime(formatTimer())
+      const min = minutes.toString().padStart(2, '0')
+      const sec = seconds.toString().padStart(2, '0')
+      const ms = Math.floor(milliseconds / 10).toString().padStart(2, '0')
+      setFinalTime(`${min}:${sec}:${ms}`)
       setCongratulationOpen(true)
     }
   }, [gameWon, gameStarted])
@@ -541,13 +539,7 @@ export const ClassicWordSearchPage = () => {
     )
   }
 
-  const getWordItemStyle = (word: string) => {
-    return {
-      textDecoration: foundWords.includes(word) ? 'line-through' : 'none',
-      color: foundWords.includes(word) ? '#4caf50' : 'inherit',
-      fontWeight: foundWords.includes(word) ? 'bold' : 'normal'
-    }
-  }
+
 
   const handleCongratulationClose = () => {
     setCongratulationOpen(false)
@@ -778,9 +770,13 @@ export const ClassicWordSearchPage = () => {
         }}>
           {/* Timer */}
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h5" fontFamily="monospace">
-              {formatTimer()}
-            </Typography>
+            <GameTimer
+              minutes={minutes}
+              seconds={seconds}
+              milliseconds={milliseconds}
+              isGameStarted={gameStarted}
+              isGameWon={gameWon}
+            />
           </Box>
 
           <Box 
@@ -879,54 +875,13 @@ export const ClassicWordSearchPage = () => {
         </Fab>
 
         {/* Word Bank Drawer */}
-        <Drawer
-          anchor="right"
-          open={wordBankOpen}
+        <WordBank
+          words={words}
+          foundWords={foundWords}
+          isOpen={wordBankOpen}
           onClose={() => setWordBankOpen(false)}
-          sx={{
-            zIndex: 1200,
-            '& .MuiDrawer-paper': {
-              width: '280px',
-              maxWidth: '80vw'
-            }
-          }}
-        >
-          <Box sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Typography variant="h6">
-                Find These Words
-              </Typography>
-              <IconButton onClick={() => setWordBankOpen(false)}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Progress: {foundWords.length} / {words.length} words found
-            </Typography>
-
-            <List dense>
-              {words.map((word: string, index: number) => (
-                <ListItem key={index} disablePadding>
-                  <Paper 
-                    elevation={1} 
-                    sx={{ 
-                      width: '100%', 
-                      p: 1, 
-                      mb: 1,
-                      backgroundColor: foundWords.includes(word) ? '#e8f5e8' : 'white'
-                    }}
-                  >
-                    <ListItemText 
-                      primary={word}
-                      primaryTypographyProps={{ style: getWordItemStyle(word) }}
-                    />
-                  </Paper>
-                </ListItem>
-              ))}
-            </List>
-          </Box>
-        </Drawer>
+          isMobile={true}
+        />
         
         {/* Congratulation Dialog */}
         <CongratulationDialog />
@@ -970,60 +925,53 @@ export const ClassicWordSearchPage = () => {
                       <MenuItem value="hard">Hard</MenuItem>
                     </Select>
                   </FormControl>
-                  <Button
-                    variant="contained"
+                  <GameButton
+                    variant="primary"
+                    icon={<Refresh />}
                     onClick={handleNewGame}
-                    startIcon={<Refresh />}
                   >
                     New Game
-                  </Button>
+                  </GameButton>
                 </Box>
               </Box>
 
               {/* Timer */}
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-                <Typography variant="h4" fontFamily="monospace">
-                  {formatTimer()}
-                </Typography>
+                <GameTimer
+                  minutes={minutes}
+                  seconds={seconds}
+                  milliseconds={milliseconds}
+                  isGameStarted={gameStarted}
+                  isGameWon={gameWon}
+                />
               </Box>
 
               <Box 
                 ref={gridRef}
                 sx={{ 
                   display: 'inline-block', 
-                  p: 2, 
-                  border: '2px solid #ccc',
-                  borderRadius: 1,
-                  backgroundColor: '#f9f9f9',
-                  touchAction: 'none',
                   position: 'relative',
                   overflow: 'visible',
                   filter: !gameStarted ? 'blur(5px)' : 'none',
                   pointerEvents: !gameStarted ? 'none' : 'auto'
                 }}
-                onMouseMove={handleMouseMove}
-                onTouchMove={handleTouchMove}
               >
-                {grid.map((row: string[], rowIndex: number) => (
-                  <Box key={rowIndex} sx={{ display: 'flex' }}>
-                    {row.map((cell: string, colIndex: number) => (
-                      <Box
-                        key={`${rowIndex}-${colIndex}`}
-                        data-cell={`${rowIndex}-${colIndex}`}
-                        sx={getCellStyle(rowIndex, colIndex)}
-                        onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                        onMouseUp={handleMouseUp}
-                        onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
-                        onTouchEnd={handleTouchEnd}
-                        onClick={() => handleCellClick(rowIndex, colIndex)}
-                      >
-                        {cell}
-                      </Box>
-                    ))}
-                  </Box>
-                ))}
-                {renderFoundWordLines()}
-                {renderSelectionLine()}
+                <GameGrid
+                  grid={grid}
+                  getCellStyle={getCellStyle}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                  selectionLineRenderer={() => (
+                    <>
+                      {renderFoundWordLines()}
+                      {renderSelectionLine()}
+                    </>
+                  )}
+                />
               </Box>
 
               {/* Play Button Overlay */}
@@ -1102,7 +1050,13 @@ export const ClassicWordSearchPage = () => {
                     >
                       <ListItemText 
                         primary={word}
-                        primaryTypographyProps={{ style: getWordItemStyle(word) }}
+                        primaryTypographyProps={{ 
+                          style: {
+                            textDecoration: foundWords.includes(word) ? 'line-through' : 'none',
+                            color: foundWords.includes(word) ? 'text.secondary' : 'text.primary',
+                            fontWeight: foundWords.includes(word) ? 'normal' : 'bold'
+                          }
+                        }}
                       />
                     </Paper>
                   </ListItem>
