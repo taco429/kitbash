@@ -33,6 +33,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { GameGrid, GameStats, CurrentWordDisplay, GameOverDialog } from '../components/games/word-search'
 import { GameButton } from '../components/shared'
+import { useDragSelection, useCellStyles, useSelectionLineRenderer } from '../hooks'
 
 interface WordPosition {
   word: string

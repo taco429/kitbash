@@ -44,6 +44,7 @@ import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
 import { GameGrid, WordBank, GameTimer } from '../components/games/word-search'
 import { GameButton } from '../components/shared'
+import { useDragSelection, useCellStyles, useSelectionLineRenderer, useFoundWordLineRenderer } from '../hooks'
 
 export const ClassicWordSearchPage = () => {
   const dispatch = useAppDispatch()
@@ -51,9 +52,6 @@ export const ClassicWordSearchPage = () => {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { grid, words, foundWords, foundWordPositions, selectedCells, gameWon, difficulty } = useAppSelector((state: any) => state.wordSearch)
-  const [isDragging, setIsDragging] = useState(false)
-  const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null)
-  const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null)
   const [wordBankOpen, setWordBankOpen] = useState(false)
   const [gameStarted, setGameStarted] = useState(false)
   const [minutes, setMinutes] = useState(0)
@@ -61,8 +59,21 @@ export const ClassicWordSearchPage = () => {
   const [milliseconds, setMilliseconds] = useState(0)
   const [congratulationOpen, setCongratulationOpen] = useState(false)
   const [finalTime, setFinalTime] = useState('')
-  const gridRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Use the extracted drag selection hook
+  const dragSelection = useDragSelection({
+    grid,
+    onSelectionStart: (cell) => {
+      dispatch(startSelection({ row: cell.row, col: cell.col }))
+    },
+    onSelectionUpdate: (cells, currentCell) => {
+      dispatch(updateSelection({ row: currentCell.row, col: currentCell.col }))
+    },
+    onSelectionEnd: (cells) => {
+      dispatch(endSelection())
+    }
+  })
   
   const handleBack = () => {
     navigate('/word-search')
@@ -150,25 +161,7 @@ export const ClassicWordSearchPage = () => {
     }
   }, [isMobile])
 
-  // Global event handlers to end selection when drag ends outside grid
-  useEffect(() => {
-    const handleGlobalEnd = () => {
-      if (isDragging) {
-        setIsDragging(false)
-        setStartCell(null)
-        setCurrentCell(null)
-        dispatch(endSelection())
-      }
-    }
-
-    document.addEventListener('mouseup', handleGlobalEnd)
-    document.addEventListener('touchend', handleGlobalEnd)
-    
-    return () => {
-      document.removeEventListener('mouseup', handleGlobalEnd)
-      document.removeEventListener('touchend', handleGlobalEnd)
-    }
-  }, [isDragging, dispatch])
+  // Global event handlers are now handled by the drag selection hook
 
   const handleDifficultyChange = (event: SelectChangeEvent) => {
     const newDifficulty = event.target.value as 'easy' | 'medium' | 'hard'
@@ -180,364 +173,45 @@ export const ClassicWordSearchPage = () => {
     dispatch(newGame({ difficulty }))
   }
 
-  // Simplified function to get cell from coordinates
-  const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
-    if (!gridRef.current) return null
-    
-    // Use elementFromPoint to directly find which cell element is under the coordinates
-    const element = document.elementFromPoint(clientX, clientY)
-    
-    if (element && element.hasAttribute('data-cell')) {
-      const cellData = element.getAttribute('data-cell')
-      if (cellData) {
-        const [row, col] = cellData.split('-').map(Number)
-        if (row >= 0 && row < grid.length && col >= 0 && col < grid[0].length) {
-          return { row, col }
-        }
-      }
-    }
-    
-    return null
-  }, [grid])
-
-  // Unified start handler for both mouse and touch
-  const handleSelectionStart = (row: number, col: number) => {
-    setIsDragging(true)
-    setStartCell({ row, col })
-    setCurrentCell({ row, col })
-    dispatch(startSelection({ row, col }))
-  }
-
-  // Unified move handler for both mouse and touch
-  const handleSelectionMove = (clientX: number, clientY: number) => {
-    if (!isDragging || !startCell) return
-
-    const cell = getCellFromCoordinates(clientX, clientY)
-    if (cell && (!currentCell || cell.row !== currentCell.row || cell.col !== currentCell.col)) {
-      setCurrentCell(cell)
-      dispatch(updateSelection({ row: cell.row, col: cell.col }))
-    }
-  }
-
-  // Unified end handler for both mouse and touch
-  const handleSelectionEnd = () => {
-    if (isDragging) {
-      setIsDragging(false)
-      setStartCell(null)
-      setCurrentCell(null)
-      dispatch(endSelection())
-    }
-  }
-
-  // Mouse event handlers
-  const handleMouseDown = (row: number, col: number) => {
-    handleSelectionStart(row, col)
-  }
-
-  const handleMouseMove = (event: React.MouseEvent) => {
-    handleSelectionMove(event.clientX, event.clientY)
-  }
-
-  const handleMouseUp = () => {
-    handleSelectionEnd()
-  }
-
-  // Touch event handlers
-  const handleTouchStart = (event: React.TouchEvent, row: number, col: number) => {
-    event.preventDefault()
-    handleSelectionStart(row, col)
-  }
-
-  const handleTouchMove = (event: React.TouchEvent) => {
-    event.preventDefault()
-    if (event.touches.length > 0) {
-      const touch = event.touches[0]
-      handleSelectionMove(touch.clientX, touch.clientY)
-    }
-  }
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    event.preventDefault()
-    handleSelectionEnd()
-  }
-
   // Click handler for single cell selection
   const handleCellClick = (row: number, col: number) => {
-    if (!isDragging) {
+    if (!dragSelection.dragState.isDragging) {
       dispatch(startSelection({ row, col }))
       dispatch(endSelection())
     }
   }
 
-  const isCellSelected = (row: number, col: number) => {
-    return selectedCells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
-  }
+  // Extract found word cells for the cell styles hook
+  const foundWordCells = foundWordPositions.flatMap((wordPosition: { word: string; cells: Array<{ row: number; col: number }> }) => 
+    wordPosition.cells
+  )
 
-  const isCellInFoundWord = (row: number, col: number) => {
-    return foundWordPositions.some((wordPosition: { word: string; cells: Array<{ row: number; col: number }> }) =>
-      wordPosition.cells.some((cell: { row: number; col: number }) => cell.row === row && cell.col === col)
-    )
-  }
+  // Use the extracted cell styles hook
+  const cellStyles = useCellStyles({
+    isMobile,
+    selectedCells,
+    foundWordCells,
+    isDragging: dragSelection.dragState.isDragging,
+    startCell: dragSelection.dragState.startCell,
+    currentCell: dragSelection.dragState.currentCell
+  })
 
-  const isCellInCurrentPath = (row: number, col: number): boolean => {
-    if (!currentCell || !startCell || !isDragging) return false
-    
-    const deltaRow = currentCell.row - startCell.row
-    const deltaCol = currentCell.col - startCell.col
-    
-    // Only show path for valid directions (horizontal, vertical, diagonal)
-    if (deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)) {
-      const steps = Math.max(Math.abs(deltaRow), Math.abs(deltaCol))
-      if (steps === 0) return row === startCell.row && col === startCell.col
-      
-      const stepRow = deltaRow / steps
-      const stepCol = deltaCol / steps
-      
-      for (let i = 0; i <= steps; i++) {
-        const checkRow = startCell.row + i * stepRow
-        const checkCol = startCell.col + i * stepCol
-        if (checkRow === row && checkCol === col) {
-          return true
-        }
-      }
-    }
-    
-    return false
-  }
+  // Use the extracted line renderer hooks
+  const selectionLineRenderer = useSelectionLineRenderer({
+    grid,
+    isDragging: dragSelection.dragState.isDragging,
+    startCell: dragSelection.dragState.startCell,
+    currentCell: dragSelection.dragState.currentCell,
+    isMobile
+  })
 
-  const getCellStyle = (row: number, col: number) => {
-    const isSelected = isCellSelected(row, col)
-    const isInCurrentPath = isCellInCurrentPath(row, col)
-    const isInFoundWord = isCellInFoundWord(row, col)
-    const isStartCell = startCell && startCell.row === row && startCell.col === col
-    const isCurrentCell = currentCell && currentCell.row === row && currentCell.col === col
-    const isDraggingStart = isDragging && isStartCell
-    const isDraggingCurrent = isDragging && isCurrentCell && !isStartCell
-    
-    const cellSize = isMobile ? '8vw' : '40px'
-    const fontSize = isMobile ? '4vw' : '16px'
-    
-    const baseStyle = {
-      width: cellSize,
-      height: cellSize,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      border: '1px solid #ccc',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      userSelect: 'none' as const,
-      fontSize: fontSize,
-      fontWeight: 'bold',
-      transition: 'all 0.1s ease',
-      touchAction: 'none',
-      position: 'relative' as const,
-      zIndex: 1,
-      margin: isMobile ? '1px' : '2px',
-      boxSizing: 'border-box' as const
-    }
+  const foundWordLineRenderer = useFoundWordLineRenderer({
+    grid,
+    foundWordPositions,
+    isMobile
+  })
 
-    // Special styling for start cell during dragging
-    if (isDraggingStart) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ffc107',
-        color: '#f57f17',
-        border: '3px solid #ff8f00',
-        borderRadius: '10px',
-        boxShadow: '0 0 10px rgba(255, 193, 7, 0.5)',
-        transform: 'scale(1.1)',
-        zIndex: 10
-      }
-    }
-
-    // Special styling for current cell during dragging
-    if (isDraggingCurrent) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ffeb3b',
-        color: '#f57f17',
-        border: '3px solid #ffc107',
-        borderRadius: '10px',
-        boxShadow: '0 0 8px rgba(255, 235, 59, 0.4)',
-        transform: 'scale(1.05)',
-        zIndex: 9
-      }
-    }
-
-    if (isSelected) {
-      return {
-        ...baseStyle,
-        backgroundColor: '#ffeb3b',
-        color: '#f57f17',
-        border: '2px solid #ffc107',
-        borderRadius: '9px',
-        zIndex: 6
-      }
-    }
-
-    if (isInCurrentPath) {
-      return {
-        ...baseStyle,
-        backgroundColor: 'rgba(255, 235, 59, 0.4)',
-        color: '#f57f17',
-        border: '2px solid #ffeb3b',
-        borderRadius: '9px',
-        boxShadow: '0 0 5px rgba(255, 235, 59, 0.4)',
-        zIndex: 8
-      }
-    }
-
-    if (isInFoundWord) {
-      return {
-        ...baseStyle,
-        backgroundColor: 'rgba(76, 175, 80, 0.3)', // Light green
-        color: '#2e7d32',
-        border: '1px solid #4caf50',
-        borderRadius: '8px',
-        zIndex: 2
-      }
-    }
-
-    return {
-      ...baseStyle,
-      backgroundColor: 'white',
-      '&:hover': {
-        backgroundColor: '#f5f5f5'
-      }
-    }
-  }
-
-  // Function to render lines through found words
-  const renderFoundWordLines = () => {
-    if (!gridRef.current || foundWordPositions.length === 0) return null
-    
-    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
-    const cellMargin = isMobile ? 2 : 4
-    const cellWithMargin = cellSize + cellMargin
-    const gridPadding = isMobile ? 8 : 16
-    const borderWidth = 2
-    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
-    
-    return (
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 3 // Below active selection (5) but above found word cells (2)
-        }}
-      >
-        <svg
-          width={gridWidth}
-          height={gridHeight}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            pointerEvents: 'none'
-          }}
-        >
-          {foundWordPositions.map((wordPosition: { word: string; cells: Array<{ row: number; col: number }> }, index: number) => {
-            if (wordPosition.cells.length < 2) return null
-            
-            const firstCell = wordPosition.cells[0]
-            const lastCell = wordPosition.cells[wordPosition.cells.length - 1]
-            
-            // Simplified coordinate calculation - cell center is at col/row * cellWithMargin + cellSize/2 + offset
-            const startX = firstCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const startY = firstCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const endX = lastCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const endY = lastCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            
-            return (
-              <line
-                key={`found-word-line-${index}`}
-                x1={startX}
-                y1={startY}
-                x2={endX}
-                y2={endY}
-                stroke="#4caf50"
-                strokeWidth={3}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.8"
-              />
-            )
-          })}
-        </svg>
-      </Box>
-    )
-  }
-
-  // Simplified selection line rendering
-  const renderSelectionLine = () => {
-    if (!isDragging || !startCell || !currentCell || !gridRef.current) return null
-    
-    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
-    const cellMargin = isMobile ? 2 : 4
-    const cellWithMargin = cellSize + cellMargin
-    const gridPadding = isMobile ? 8 : 16
-    const borderWidth = 2
-    
-    // Use the same coordinate calculation as found word lines for consistency
-    const startX = startCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const startY = startCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const endX = currentCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    const endY = currentCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-    
-    // Check if direction is valid
-    const deltaRow = currentCell.row - startCell.row
-    const deltaCol = currentCell.col - startCell.col
-    const isValidDirection = deltaRow === 0 || deltaCol === 0 || Math.abs(deltaRow) === Math.abs(deltaCol)
-    
-    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const pathWidth = cellSize * 1.05
-    
-    const validColor = isValidDirection ? "rgba(230, 220, 15, 0.5)" : "rgba(220, 190, 30, 0.5)"
-    
-    return (
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 7 // Above path cells (5) and found word cells (2)
-        }}
-      >
-        <svg
-          width={gridWidth}
-          height={gridHeight}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            pointerEvents: 'none'
-          }}
-        >
-          <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
-            stroke={validColor}
-            strokeWidth={pathWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.8"
-          />
-        </svg>
-      </Box>
-    )
-  }
+  // Rendering functions are now handled by hooks
 
 
 
@@ -780,7 +454,7 @@ export const ClassicWordSearchPage = () => {
           </Box>
 
           <Box 
-            ref={gridRef}
+            ref={dragSelection.gridRef}
             sx={{ 
               display: 'inline-block', 
               p: 1, 
@@ -793,8 +467,8 @@ export const ClassicWordSearchPage = () => {
               filter: !gameStarted ? 'blur(5px)' : 'none',
               pointerEvents: !gameStarted ? 'none' : 'auto'
             }}
-            onMouseMove={handleMouseMove}
-            onTouchMove={handleTouchMove}
+            onMouseMove={dragSelection.handleMouseMove}
+            onTouchMove={dragSelection.handleTouchMove}
           >
             {grid.map((row: string[], rowIndex: number) => (
               <Box key={rowIndex} sx={{ display: 'flex' }}>
@@ -802,11 +476,11 @@ export const ClassicWordSearchPage = () => {
                   <Box
                     key={`${rowIndex}-${colIndex}`}
                     data-cell={`${rowIndex}-${colIndex}`}
-                    sx={getCellStyle(rowIndex, colIndex)}
-                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onMouseUp={handleMouseUp}
-                    onTouchStart={(e) => handleTouchStart(e, rowIndex, colIndex)}
-                    onTouchEnd={handleTouchEnd}
+                    sx={cellStyles.getCellStyle(rowIndex, colIndex)}
+                    onMouseDown={() => dragSelection.handleMouseDown(rowIndex, colIndex)}
+                    onMouseUp={dragSelection.handleMouseUp}
+                    onTouchStart={(e) => dragSelection.handleTouchStart(e, rowIndex, colIndex)}
+                    onTouchEnd={dragSelection.handleTouchEnd}
                     onClick={() => handleCellClick(rowIndex, colIndex)}
                   >
                     {cell}
@@ -814,8 +488,8 @@ export const ClassicWordSearchPage = () => {
                 ))}
               </Box>
             ))}
-            {renderFoundWordLines()}
-            {renderSelectionLine()}
+            {foundWordLineRenderer.renderFoundWordLines()}
+            {selectionLineRenderer.renderSelectionLine()}
           </Box>
           
           {/* Play Button Overlay */}
@@ -947,7 +621,7 @@ export const ClassicWordSearchPage = () => {
               </Box>
 
               <Box 
-                ref={gridRef}
+                ref={dragSelection.gridRef}
                 sx={{ 
                   display: 'inline-block', 
                   position: 'relative',
@@ -958,17 +632,17 @@ export const ClassicWordSearchPage = () => {
               >
                 <GameGrid
                   grid={grid}
-                  getCellStyle={getCellStyle}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUp}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
+                  getCellStyle={cellStyles.getCellStyle}
+                  onMouseDown={dragSelection.handleMouseDown}
+                  onMouseMove={dragSelection.handleMouseMove}
+                  onMouseUp={dragSelection.handleMouseUp}
+                  onTouchStart={dragSelection.handleTouchStart}
+                  onTouchMove={dragSelection.handleTouchMove}
+                  onTouchEnd={dragSelection.handleTouchEnd}
                   selectionLineRenderer={() => (
                     <>
-                      {renderFoundWordLines()}
-                      {renderSelectionLine()}
+                      {foundWordLineRenderer.renderFoundWordLines()}
+                      {selectionLineRenderer.renderSelectionLine()}
                     </>
                   )}
                 />
