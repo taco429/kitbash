@@ -21,7 +21,6 @@ import {
   Toolbar,
   IconButton,
   Fab,
-  Drawer,
   useTheme,
   useMediaQuery,
   Dialog,
@@ -35,7 +34,6 @@ import {
   Search, 
   ArrowBack,
   List as ListIcon,
-  Close as CloseIcon,
   PlayArrow,
   Home as HomeIcon,
   Timer as TimerIcon,
@@ -45,7 +43,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks/redux'
 import { newGame, startSelection, updateSelection, endSelection } from '../store/wordSearchSlice'
 import { GameGrid, WordBank, GameTimer } from '../components/games/word-search'
-import { GameButton, GameCard, GameDialog } from '../components/shared'
+import { GameButton } from '../components/shared'
 
 export const ClassicWordSearchPage = () => {
   const dispatch = useAppDispatch()
