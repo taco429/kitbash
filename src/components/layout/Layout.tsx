@@ -24,6 +24,7 @@ import {
   Code,
   Games,
   Search,
+  Casino,
 } from '@mui/icons-material'
 import { getVersion } from '../../utils/version'
 
@@ -46,6 +47,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'Todo List Demo', icon: <FormatListBulleted />, path: '/todos' },
   { text: 'Tower Defense', icon: <Games />, path: '/tower-defense' },
   { text: 'Word Search', icon: <Search />, path: '/word-search' },
+  { text: 'Card Games', icon: <Casino />, path: '/card-games' },
 ]
 
 export const Layout = ({ children }: LayoutProps) => {

@@ -8,6 +8,7 @@ const navigationItems = [
   { text: 'Todo List Demo', path: '/kitbash/todos' },
   { text: 'Tower Defense', path: '/kitbash/tower-defense' },
   { text: 'Word Search', path: '/kitbash/word-search' },
+  { text: 'Card Games', path: '/kitbash/card-games' },
 ];
 
 // Additional pages that can be navigated to
