@@ -20,6 +20,14 @@ interface CardGame {
 
 const cardGames: CardGame[] = [
   {
+    id: 'demo',
+    name: 'Card Game Demo',
+    description: 'Interactive demonstration of reusable card game components',
+    icon: <Style />,
+    path: '/card-games/demo',
+    isComingSoon: false
+  },
+  {
     id: 'poker',
     name: 'Texas Hold\'em Poker',
     description: 'Classic poker with community cards and betting rounds',
@@ -31,7 +39,7 @@ const cardGames: CardGame[] = [
     id: 'blackjack',
     name: 'Blackjack',
     description: 'Beat the dealer by getting as close to 21 as possible',
-    icon: <Style />,
+    icon: <LocalFireDepartment />,
     path: '/card-games/blackjack',
     isComingSoon: true
   },
@@ -55,7 +63,7 @@ const cardGames: CardGame[] = [
     id: 'uno',
     name: 'UNO',
     description: 'Match colors and numbers to be the first to empty your hand',
-    icon: <LocalFireDepartment />,
+    icon: <Bolt />,
     path: '/card-games/uno',
     isComingSoon: true
   },
@@ -63,7 +71,7 @@ const cardGames: CardGame[] = [
     id: 'war',
     name: 'War',
     description: 'Simple card game where highest card wins',
-    icon: <Bolt />,
+    icon: <Casino />,
     path: '/card-games/war',
     isComingSoon: true
   }
