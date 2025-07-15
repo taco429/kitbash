@@ -44,6 +44,7 @@ export const GameGrid = ({
     >
       <Box
         ref={gridRef}
+        data-grid="true"
         sx={{
           display: 'grid',
           gridTemplateColumns: `repeat(${grid[0]?.length || 10}, 1fr)`,
