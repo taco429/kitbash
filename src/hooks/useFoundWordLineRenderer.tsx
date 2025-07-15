@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useMemo } from 'react'
 import { Box } from '@mui/material'
 
 interface Cell {
@@ -26,21 +26,46 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
     foundWordPositions,
     isMobile = false,
     strokeColor = '#4caf50',
-    strokeWidth = 3,
     opacity = 0.8
   } = options
 
+  const svgRef = useRef<SVGSVGElement>(null)
+
+  // Memoize grid element and dimensions to avoid repeated DOM queries
+  const gridInfo = useMemo(() => {
+    const gridElement = document.querySelector('[data-grid="true"]') as HTMLElement
+    const gridRect = gridElement?.getBoundingClientRect()
+    return {
+      element: gridElement,
+      width: gridRect?.width || 400,
+      height: gridRect?.height || 400
+    }
+  }, [foundWordPositions.length, grid.length]) // Re-calculate when words or grid size changes
+
+  // Get actual cell center coordinates using DOM measurements
+  const getCellCenterCoordinates = useCallback((row: number, col: number) => {
+    const cellElement = document.querySelector(`[data-cell="${row}-${col}"]`) as HTMLElement
+    if (!cellElement || !gridInfo.element) return null
+
+    const cellRect = cellElement.getBoundingClientRect()
+    const gridRect = gridInfo.element.getBoundingClientRect()
+
+    // Calculate center position relative to the grid container
+    const centerX = cellRect.left + cellRect.width / 2 - gridRect.left
+    const centerY = cellRect.top + cellRect.height / 2 - gridRect.top
+
+    return { x: centerX, y: centerY }
+  }, [gridInfo.element])
+
   const renderFoundWordLines = useCallback(() => {
-    if (!foundWordPositions.length || !grid.length) return null
-    
-    const cellSize = isMobile ? window.innerWidth * 0.08 : 40
-    const cellMargin = isMobile ? 2 : 4
-    const cellWithMargin = cellSize + cellMargin
-    const gridPadding = isMobile ? 8 : 16
-    const borderWidth = 2
-    const gridWidth = grid[0].length * cellWithMargin + (gridPadding + borderWidth) * 2
-    const gridHeight = grid.length * cellWithMargin + (gridPadding + borderWidth) * 2
-    
+    if (foundWordPositions.length === 0) return null
+
+    // Calculate dynamic stroke width based on actual cell size
+    const firstCell = foundWordPositions[0]?.cells[0]
+    const cellElement = firstCell ? document.querySelector(`[data-cell="${firstCell.row}-${firstCell.col}"]`) as HTMLElement : null
+    const cellSize = cellElement ? Math.min(cellElement.offsetWidth, cellElement.offsetHeight) : (isMobile ? 32 : 40)
+    const dynamicStrokeWidth = cellSize * 0.6 // 60% of cell size for found words (slightly thinner than selection)
+
     return (
       <Box
         sx={{
@@ -50,12 +75,13 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
           width: '100%',
           height: '100%',
           pointerEvents: 'none',
-          zIndex: 3 // Below active selection (5) but above found word cells (2)
+          zIndex: 5 // Below selection lines
         }}
       >
         <svg
-          width={gridWidth}
-          height={gridHeight}
+          ref={svgRef}
+          width={gridInfo.width}
+          height={gridInfo.height}
           style={{
             position: 'absolute',
             top: 0,
@@ -65,25 +91,24 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
         >
           {foundWordPositions.map((wordPosition, index) => {
             if (wordPosition.cells.length < 2) return null
+
+            const startCell = wordPosition.cells[0]
+            const endCell = wordPosition.cells[wordPosition.cells.length - 1]
             
-            const firstCell = wordPosition.cells[0]
-            const lastCell = wordPosition.cells[wordPosition.cells.length - 1]
-            
-            // Calculate coordinates for line drawing
-            const startX = firstCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const startY = firstCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const endX = lastCell.col * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            const endY = lastCell.row * cellWithMargin + cellSize / 2 + gridPadding + borderWidth
-            
+            const startCoords = getCellCenterCoordinates(startCell.row, startCell.col)
+            const endCoords = getCellCenterCoordinates(endCell.row, endCell.col)
+
+            if (!startCoords || !endCoords) return null
+
             return (
               <line
-                key={`found-word-line-${index}`}
-                x1={startX}
-                y1={startY}
-                x2={endX}
-                y2={endY}
+                key={`found-word-${index}`}
+                x1={startCoords.x}
+                y1={startCoords.y}
+                x2={endCoords.x}
+                y2={endCoords.y}
                 stroke={strokeColor}
-                strokeWidth={strokeWidth}
+                strokeWidth={dynamicStrokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 opacity={opacity}
@@ -95,11 +120,12 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
     )
   }, [
     foundWordPositions,
-    grid,
     isMobile,
     strokeColor,
-    strokeWidth,
-    opacity
+    opacity,
+    getCellCenterCoordinates,
+    gridInfo.width,
+    gridInfo.height
   ])
 
   return {
