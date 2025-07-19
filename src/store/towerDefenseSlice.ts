@@ -112,7 +112,7 @@ export const towerDefenseSlice = createSlice({
           position: { ...GAME_PATH[0] },
           health: 50 + (state.level * 10),
           maxHealth: 50 + (state.level * 10),
-          speed: GAME_CONFIG.ENEMY_SPEED * state.gameSpeed,
+          speed: GAME_CONFIG.ENEMY_SPEED,
           pathIndex: 0,
           reward: 10 + (state.level * 2)
         }
@@ -139,7 +139,10 @@ export const towerDefenseSlice = createSlice({
         const dy = targetPoint.y - enemy.position.y
         const dist = Math.sqrt(dx * dx + dy * dy)
         
-        if (dist < enemy.speed) {
+        // Use base enemy speed multiplied by current game speed for dynamic speed adjustment
+        const effectiveSpeed = GAME_CONFIG.ENEMY_SPEED * state.gameSpeed
+        
+        if (dist < effectiveSpeed) {
           enemy.pathIndex += 1
           if (enemy.pathIndex >= GAME_PATH.length - 1) {
             state.lives -= 1
@@ -150,8 +153,8 @@ export const towerDefenseSlice = createSlice({
             enemy.position = { ...nextPoint }
           }
         } else {
-          enemy.position.x += (dx / dist) * enemy.speed
-          enemy.position.y += (dy / dist) * enemy.speed
+          enemy.position.x += (dx / dist) * effectiveSpeed
+          enemy.position.y += (dy / dist) * effectiveSpeed
         }
         
         if (enemy.health > 0) {
@@ -187,7 +190,7 @@ export const towerDefenseSlice = createSlice({
               position: { ...tower.position },
               target: targetPosition,
               damage: tower.damage,
-              speed: GAME_CONFIG.PROJECTILE_SPEED * state.gameSpeed
+              speed: GAME_CONFIG.PROJECTILE_SPEED
             }
             
             state.projectiles.push(projectile)
@@ -203,7 +206,10 @@ export const towerDefenseSlice = createSlice({
         const dy = projectile.target.y - projectile.position.y
         const distance = Math.sqrt(dx * dx + dy * dy)
         
-        if (distance < projectile.speed) {
+        // Use base projectile speed multiplied by current game speed for dynamic speed adjustment
+        const effectiveSpeed = GAME_CONFIG.PROJECTILE_SPEED * state.gameSpeed
+        
+        if (distance < effectiveSpeed) {
           // Hit target - find and damage enemy
           const targetEnemyIndex = state.enemies.findIndex(enemy => 
             Math.abs(enemy.position.x - projectile.target.x) < 20 &&
@@ -221,8 +227,8 @@ export const towerDefenseSlice = createSlice({
           
           return false
         } else {
-          projectile.position.x += (dx / distance) * projectile.speed
-          projectile.position.y += (dy / distance) * projectile.speed
+          projectile.position.x += (dx / distance) * effectiveSpeed
+          projectile.position.y += (dy / distance) * effectiveSpeed
           return true
         }
       })
