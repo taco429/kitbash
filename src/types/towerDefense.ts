@@ -8,7 +8,7 @@ export interface Enemy {
   position: Position
   health: number
   maxHealth: number
-  speed: number
+  speed: number // Base speed - actual movement speed is calculated dynamically with game speed multiplier
   pathIndex: number
   reward: number
 }
@@ -29,7 +29,7 @@ export interface Projectile {
   position: Position
   target: Position
   damage: number
-  speed: number
+  speed: number // Base speed - actual movement speed is calculated dynamically with game speed multiplier
 }
 
 export interface GameState {
