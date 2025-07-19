@@ -74,6 +74,14 @@ const cardGames: CardGame[] = [
     icon: <Casino />,
     path: '/card-games/war',
     isComingSoon: false
+  },
+  {
+    id: 'deck-visual-demo',
+    name: 'Deck Visual Demo',
+    description: 'Interactive showcase of the reusable DeckVisual component for card games',
+    icon: <Style />,
+    path: '/card-games/deck-demo',
+    isComingSoon: false
   }
 ]
 
