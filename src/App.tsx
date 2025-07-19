@@ -12,6 +12,7 @@ import { ClassicWordSearchPage } from './pages/ClassicWordSearchPage'
 import { OneWordRushPage } from './pages/OneWordRushPage'
 import { CardGamesPage } from './pages/CardGamesPage'
 import { CardGameDemoPage } from './pages/CardGameDemoPage'
+import { WarGamePage } from './pages/WarGamePage'
 
 const theme = createTheme({
   palette: {
@@ -42,6 +43,7 @@ function App() {
             <Route path="/word-search/one-word-rush" element={<OneWordRushPage />} />
             <Route path="/card-games" element={<CardGamesPage />} />
             <Route path="/card-games/demo" element={<CardGameDemoPage />} />
+            <Route path="/card-games/war" element={<WarGamePage />} />
           </Routes>
         </Layout>
       </Router>
