@@ -10,6 +10,7 @@ interface GameStatsProps {
   enemies: number
   towers: number
   projectiles: number
+  gameSpeed: number
 }
 
 export const GameStats = ({
@@ -20,7 +21,8 @@ export const GameStats = ({
   maxLives,
   enemies,
   towers,
-  projectiles
+  projectiles,
+  gameSpeed
 }: GameStatsProps) => {
   const getHealthColor = () => {
     const percentage = (lives / maxLives) * 100
@@ -51,6 +53,16 @@ export const GameStats = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="body2">Level:</Typography>
           <Typography variant="body2" fontWeight="bold">{level}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="body2">Speed:</Typography>
+          <Typography 
+            variant="body2" 
+            fontWeight="bold" 
+            color={gameSpeed > 1 ? 'primary.main' : 'text.primary'}
+          >
+            {gameSpeed}x
+          </Typography>
         </Box>
       </Box>
 

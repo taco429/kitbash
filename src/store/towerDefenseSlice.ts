@@ -104,14 +104,15 @@ export const towerDefenseSlice = createSlice({
     
     spawnEnemy: (state) => {
       const currentTime = Date.now()
+      const adjustedSpawnDelay = state.enemySpawnDelay / state.gameSpeed
       
-      if (currentTime - state.lastEnemySpawn >= state.enemySpawnDelay) {
+      if (currentTime - state.lastEnemySpawn >= adjustedSpawnDelay) {
         const newEnemy: Enemy = {
           id: generateEnemyId(),
           position: { ...GAME_PATH[0] },
           health: 50 + (state.level * 10),
           maxHealth: 50 + (state.level * 10),
-          speed: GAME_CONFIG.ENEMY_SPEED,
+          speed: GAME_CONFIG.ENEMY_SPEED * state.gameSpeed,
           pathIndex: 0,
           reward: 10 + (state.level * 2)
         }
@@ -165,7 +166,8 @@ export const towerDefenseSlice = createSlice({
       const currentTime = Date.now()
       
       state.towers.forEach(tower => {
-        if (currentTime - tower.lastFired >= tower.fireRate) {
+        const adjustedFireRate = tower.fireRate / state.gameSpeed
+        if (currentTime - tower.lastFired >= adjustedFireRate) {
           // Find closest enemy in range
           let targetPosition: Position | null = null
           let closestDistance = Infinity
@@ -185,7 +187,7 @@ export const towerDefenseSlice = createSlice({
               position: { ...tower.position },
               target: targetPosition,
               damage: tower.damage,
-              speed: GAME_CONFIG.PROJECTILE_SPEED
+              speed: GAME_CONFIG.PROJECTILE_SPEED * state.gameSpeed
             }
             
             state.projectiles.push(projectile)
@@ -229,6 +231,10 @@ export const towerDefenseSlice = createSlice({
     gameOver: (state) => {
       state.isRunning = false
       state.isPaused = false
+    },
+    
+    setGameSpeed: (state, action: PayloadAction<number>) => {
+      state.gameSpeed = action.payload
     }
   }
 })
@@ -243,7 +249,8 @@ export const {
   updateEnemies,
   updateTowers,
   updateProjectiles,
-  gameOver
+  gameOver,
+  setGameSpeed
 } = towerDefenseSlice.actions
 
 export default towerDefenseSlice.reducer 
