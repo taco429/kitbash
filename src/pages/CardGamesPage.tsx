@@ -70,10 +70,10 @@ const cardGames: CardGame[] = [
   {
     id: 'war',
     name: 'War',
-    description: 'Simple card game where highest card wins',
+    description: 'Battle it out in the classic card game! Higher card wins, ties trigger WAR!',
     icon: <Casino />,
     path: '/card-games/war',
-    isComingSoon: true
+    isComingSoon: false
   }
 ]
 
