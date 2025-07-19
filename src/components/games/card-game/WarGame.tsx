@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { Box, Typography, LinearProgress, Alert, Chip } from '@mui/material'
 import { styled } from '@mui/material/styles'
 import { Card, CardData } from './Card'
+import { DeckVisual } from './DeckVisual'
 import { createStandardDeck, shuffleCards, getCardValue } from './utils/deckUtils'
 import { GameButton } from '../../shared/GameButton'
 import { GameDialog } from '../../shared/GameDialog'
@@ -25,17 +26,23 @@ const GameArea = styled(Box)(({ theme }) => ({
   gap: theme.spacing(3),
   padding: theme.spacing(2),
   minHeight: '600px',
+  '@keyframes pulse': {
+    '0%': {
+      opacity: 1,
+      transform: 'scale(1)',
+    },
+    '50%': {
+      opacity: 0.8,
+      transform: 'scale(1.05)',
+    },
+    '100%': {
+      opacity: 1,
+      transform: 'scale(1)',
+    },
+  },
 }))
 
-const PlayerArea = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
-  borderRadius: theme.spacing(1),
-  backgroundColor: theme.palette.grey[50],
-  minWidth: '300px',
-}))
+
 
 const BattleArea = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -282,28 +289,77 @@ export const WarGame: React.FC = () => {
           color="primary" 
           variant="outlined" 
         />
-        <Chip 
-          label={`War Pile: ${gameState.warPile.length} cards`} 
-          color="secondary" 
-          variant="outlined" 
-        />
+        {gameState.gameStatus === 'war' && (
+          <Chip 
+            label="WAR MODE" 
+            color="warning" 
+            variant="filled"
+            sx={{ fontWeight: 'bold', animation: 'pulse 1.5s infinite' }}
+          />
+        )}
       </Box>
 
-      {/* Player Areas */}
-      <Box display="flex" justifyContent="space-between" width="100%" maxWidth="800px" mb={3}>
-        <PlayerArea>
-          <Typography variant="h6">You</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cards: {gameState.playerDeck.length}
-          </Typography>
-        </PlayerArea>
+      {/* Player Deck Areas */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" width="100%" maxWidth="800px" mb={3}>
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+          <Typography variant="h6" color="primary">Your Deck</Typography>
+          <DeckVisual
+            cards={gameState.playerDeck}
+            label="Your Cards"
+            size="medium"
+            showCount={true}
+            showLabel={false}
+            maxVisibleCards={5}
+            onClick={() => {}} // Placeholder for potential future functionality
+            disabled={gameState.isProcessing}
+          />
+        </Box>
         
-        <PlayerArea>
-          <Typography variant="h6">Computer</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cards: {gameState.computerDeck.length}
+        <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+          <Typography variant="body2" color="text.secondary" fontWeight="bold">
+            WAR PILE
           </Typography>
-        </PlayerArea>
+          {gameState.warPile.length > 0 ? (
+            <DeckVisual
+              cards={gameState.warPile}
+              label="War Cards"
+              size="small"
+              showCount={true}
+              showLabel={false}
+              maxVisibleCards={3}
+              stackOffset={2}
+              style={{ opacity: 0.8 }}
+            />
+          ) : (
+            <Box 
+              width={50} 
+              height={70} 
+              display="flex" 
+              alignItems="center" 
+              justifyContent="center"
+              border="1px dashed #ccc"
+              borderRadius={1}
+              color="text.disabled"
+              fontSize="0.7rem"
+            >
+              Empty
+            </Box>
+          )}
+        </Box>
+        
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+          <Typography variant="h6" color="error">Computer Deck</Typography>
+          <DeckVisual
+            cards={gameState.computerDeck}
+            label="Computer Cards"
+            size="medium"
+            showCount={true}
+            showLabel={false}
+            maxVisibleCards={5}
+            onClick={() => {}} // Placeholder for potential future functionality
+            disabled={gameState.isProcessing}
+          />
+        </Box>
       </Box>
 
       {/* Battle Area */}
