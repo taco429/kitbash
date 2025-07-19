@@ -15,7 +15,8 @@ import {
   updateEnemies,
   updateTowers,
   updateProjectiles,
-  gameOver
+  gameOver,
+  setGameSpeed
 } from '../store/towerDefenseSlice'
 import { 
   GAME_CONFIG, 
@@ -151,6 +152,17 @@ export const TowerDefensePage = () => {
       ctx.fill()
     })
 
+    // Draw speed indicator
+    if (gameState.gameSpeed > 1) {
+      ctx.fillStyle = 'rgba(25, 118, 210, 0.1)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      
+      ctx.fillStyle = '#1976d2'
+      ctx.font = 'bold 16px Arial'
+      ctx.textAlign = 'right'
+      ctx.fillText(`${gameState.gameSpeed}x SPEED`, canvas.width - 10, 25)
+    }
+
     // Draw placement preview
     if (gameState.selectedTowerType) {
       // This would need mouse position tracking to work properly
@@ -187,8 +199,40 @@ export const TowerDefensePage = () => {
     dispatch(resetGame())
   }
 
+  const handleSpeedChange = (speed: number) => {
+    dispatch(setGameSpeed(speed))
+  }
+
+  // Keyboard shortcuts for speed control
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (!gameState.isRunning || gameState.isPaused) return
+      
+      switch (event.key) {
+        case '1':
+          handleSpeedChange(1)
+          break
+        case '2':
+          handleSpeedChange(2)
+          break
+        case '4':
+          handleSpeedChange(4)
+          break
+        case ' ':
+          event.preventDefault()
+          handlePauseGame()
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [gameState.isRunning, gameState.isPaused])
+
   useEffect(() => {
     if (gameState.isRunning && !gameState.isPaused) {
+      // Base interval is 50ms, but we don't need to adjust it for speed since
+      // the speed multiplier is handled in the game logic itself
       gameLoopRef.current = window.setInterval(gameLoop, 50)
     } else {
       if (gameLoopRef.current) {
@@ -201,7 +245,7 @@ export const TowerDefensePage = () => {
         clearInterval(gameLoopRef.current)
       }
     }
-  }, [gameLoop, gameState.isRunning, gameState.isPaused])
+  }, [gameLoop, gameState.isRunning, gameState.isPaused, gameState.gameSpeed])
 
   useEffect(() => {
     drawGame()
@@ -214,6 +258,9 @@ export const TowerDefensePage = () => {
       </Typography>
       <Typography variant="h6" color="text.secondary" paragraph>
         A simple tower defense game built with React, Canvas, and Redux
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <strong>Controls:</strong> Click to place towers • Keys 1/2/4 for speed • Spacebar to pause
       </Typography>
 
       <Grid container spacing={3}>
@@ -230,9 +277,11 @@ export const TowerDefensePage = () => {
               <GameControls
                 isRunning={gameState.isRunning}
                 isPaused={gameState.isPaused}
+                gameSpeed={gameState.gameSpeed}
                 onStart={handleStartGame}
                 onPause={handlePauseGame}
                 onReset={handleResetGame}
+                onSpeedChange={handleSpeedChange}
               />
             }
           />
@@ -250,6 +299,7 @@ export const TowerDefensePage = () => {
             enemies={gameState.enemies.length}
             towers={gameState.towers.length}
             projectiles={gameState.projectiles.length}
+            gameSpeed={gameState.gameSpeed}
           />
 
           {/* Tower Selection */}
