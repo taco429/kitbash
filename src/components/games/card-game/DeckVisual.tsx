@@ -156,7 +156,7 @@ export const DeckVisual: React.FC<DeckVisualProps> = ({
     <DeckContainer
       size={size}
       isEmpty={isEmpty}
-      clickable={canClick}
+      clickable={!!canClick}
       orientation={orientation}
       style={style}
     >

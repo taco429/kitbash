@@ -42,15 +42,7 @@ const GameArea = styled(Box)(({ theme }) => ({
   },
 }))
 
-const PlayerArea = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(2),
-  padding: theme.spacing(2),
-  borderRadius: theme.spacing(1),
-  backgroundColor: theme.palette.grey[50],
-  minWidth: '300px',
-}))
+
 
 const BattleArea = styled(Box)(({ theme }) => ({
   display: 'flex',
