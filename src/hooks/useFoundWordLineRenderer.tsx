@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { Box } from '@mui/material'
 
 interface Cell {
@@ -30,32 +30,91 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
   } = options
 
   const svgRef = useRef<SVGSVGElement>(null)
+  const [gridDimensions, setGridDimensions] = useState({ width: 400, height: 400 })
+  const [shouldUpdate, setShouldUpdate] = useState(0)
 
-  // Memoize grid element and dimensions to avoid repeated DOM queries
-  const gridInfo = useMemo(() => {
-    const gridElement = document.querySelector('[data-grid="true"]') as HTMLElement
-    const gridRect = gridElement?.getBoundingClientRect()
-    return {
-      element: gridElement,
-      width: gridRect?.width || 400,
-      height: gridRect?.height || 400
+  // Force re-measurement on mobile when needed
+  const forceUpdate = useCallback(() => {
+    setShouldUpdate(prev => prev + 1)
+  }, [])
+
+  // Handle resize events and orientation changes on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        forceUpdate()
+      }, 100)
     }
-  }, [foundWordPositions.length, grid.length]) // Re-calculate when words or grid size changes
 
-  // Get actual cell center coordinates using DOM measurements
+    const handleOrientationChange = () => {
+      // Longer delay for orientation changes
+      setTimeout(() => {
+        forceUpdate()
+      }, 300)
+    }
+
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('orientationchange', handleOrientationChange)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleOrientationChange)
+    }
+  }, [forceUpdate])
+
+  // Get grid dimensions with better mobile support
+  const updateGridDimensions = useCallback(() => {
+    const gridElement = document.querySelector('[data-grid="true"]') as HTMLElement
+    if (gridElement) {
+      // Use requestAnimationFrame to ensure measurements are accurate
+      requestAnimationFrame(() => {
+        const gridRect = gridElement.getBoundingClientRect()
+        if (gridRect.width > 0 && gridRect.height > 0) {
+          setGridDimensions({
+            width: gridRect.width,
+            height: gridRect.height
+          })
+        }
+      })
+    }
+  }, [])
+
+  // Update dimensions when grid changes, found words change, or on mobile updates
+  useEffect(() => {
+    if (isMobile) {
+      // Add a small delay for initial mobile rendering
+      const timer = setTimeout(() => {
+        updateGridDimensions()
+      }, 50)
+      return () => clearTimeout(timer)
+    } else {
+      updateGridDimensions()
+    }
+  }, [updateGridDimensions, foundWordPositions.length, grid.length, shouldUpdate, isMobile])
+
+  // Get actual cell center coordinates with improved mobile support
   const getCellCenterCoordinates = useCallback((row: number, col: number) => {
     const cellElement = document.querySelector(`[data-cell="${row}-${col}"]`) as HTMLElement
-    if (!cellElement || !gridInfo.element) return null
+    const gridElement = document.querySelector('[data-grid="true"]') as HTMLElement
+    
+    if (!cellElement || !gridElement) return null
 
+    // Use requestAnimationFrame for better mobile compatibility
     const cellRect = cellElement.getBoundingClientRect()
-    const gridRect = gridInfo.element.getBoundingClientRect()
+    const gridRect = gridElement.getBoundingClientRect()
+
+    // Ensure we have valid measurements
+    if (cellRect.width === 0 || cellRect.height === 0 || gridRect.width === 0 || gridRect.height === 0) {
+      return null
+    }
 
     // Calculate center position relative to the grid container
     const centerX = cellRect.left + cellRect.width / 2 - gridRect.left
     const centerY = cellRect.top + cellRect.height / 2 - gridRect.top
 
     return { x: centerX, y: centerY }
-  }, [gridInfo.element])
+  }, [])
 
   const renderFoundWordLines = useCallback(() => {
     if (foundWordPositions.length === 0) return null
@@ -64,7 +123,7 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
     const firstCell = foundWordPositions[0]?.cells[0]
     const cellElement = firstCell ? document.querySelector(`[data-cell="${firstCell.row}-${firstCell.col}"]`) as HTMLElement : null
     const cellSize = cellElement ? Math.min(cellElement.offsetWidth, cellElement.offsetHeight) : (isMobile ? 32 : 40)
-    const dynamicStrokeWidth = cellSize * 0.6 // 60% of cell size for found words (slightly thinner than selection)
+    const dynamicStrokeWidth = Math.max(cellSize * 0.6, isMobile ? 16 : 20) // Ensure minimum stroke width on mobile
 
     return (
       <Box
@@ -80,13 +139,16 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
       >
         <svg
           ref={svgRef}
-          width={gridInfo.width}
-          height={gridInfo.height}
+          width={gridDimensions.width}
+          height={gridDimensions.height}
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            // Force hardware acceleration on mobile
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden'
           }}
         >
           {foundWordPositions.map((wordPosition, index) => {
@@ -124,8 +186,8 @@ export const useFoundWordLineRenderer = (options: FoundWordLineRendererOptions) 
     strokeColor,
     opacity,
     getCellCenterCoordinates,
-    gridInfo.width,
-    gridInfo.height
+    gridDimensions.width,
+    gridDimensions.height
   ])
 
   return {
