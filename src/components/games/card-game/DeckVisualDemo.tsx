@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
-import { Box, Typography, Button, Grid, Paper } from '@mui/material'
+import { Box, Typography, Button, Grid, Paper, useTheme, useMediaQuery } from '@mui/material'
 import { DeckVisual } from './DeckVisual'
 import { createStandardDeck, shuffleCards } from './utils/deckUtils'
 import { CardData } from './Card'
 
 export const DeckVisualDemo: React.FC = () => {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  
   const [fullDeck, setFullDeck] = useState<CardData[]>(() => 
     shuffleCards(createStandardDeck(false))
   )
@@ -36,15 +39,17 @@ export const DeckVisualDemo: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: isMobile ? 1 : 3 }}>
       <Typography variant="h4" gutterBottom align="center">
         DeckVisual Component Demo
       </Typography>
-      <Typography variant="body1" color="text.secondary" align="center" mb={4}>
-        A reusable component for visualizing card decks in any card game
-      </Typography>
+      {!isMobile && (
+        <Typography variant="body1" color="text.secondary" align="center" mb={4}>
+          A reusable component for visualizing card decks in any card game
+        </Typography>
+      )}
 
-      <Box display="flex" gap={2} justifyContent="center" mb={4}>
+      <Box display="flex" gap={2} justifyContent="center" mb={isMobile ? 2 : 4}>
         <Button variant="outlined" onClick={shuffleDecks}>
           Shuffle Decks
         </Button>

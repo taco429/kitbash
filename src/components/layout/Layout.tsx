@@ -22,9 +22,10 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Check if we're on a word search game page (not the hub) and on mobile for full-screen mode
+  // Check if we're on a word search game page (not the hub) or card game page and on mobile for full-screen mode
   const isWordSearchGamePage = location.pathname.startsWith('/word-search/') && location.pathname !== '/word-search'
-  const showFullScreen = isWordSearchGamePage && isMobile
+  const isCardGamePage = location.pathname.startsWith('/card-games/') && location.pathname !== '/card-games'
+  const showFullScreen = (isWordSearchGamePage || isCardGamePage) && isMobile
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
@@ -37,7 +38,7 @@ export const Layout = ({ children }: LayoutProps) => {
     }
   }
 
-  // If word search on mobile, render full-screen without layout chrome
+  // If word search or card game on mobile, render full-screen without layout chrome
   if (showFullScreen) {
     return (
       <Box sx={{ height: '100vh', overflow: 'hidden' }}>
