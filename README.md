@@ -1,97 +1,40 @@
-# Kitbash
+# Battler Card Game
 
-A modern React TypeScript application - a place to slap things together. Built with Vite, MUI, Redux Toolkit, and React Router.
+A simple 1v1 card game where you battle against a computer opponent to be the first to reach 100 points!
 
-**🔗 [Live Demo](https://taco429.github.io/kitbash) | [GitHub Repository](https://github.com/taco429/kitbash)**
+## How to Play
 
-## 🚀 Tech Stack
+### Game Rules
+- Each player starts with 10 cards in their hand
+- Cards are numbered 1-13 (with multiple copies in the deck)
+- Each turn:
+  1. Draw 1 card from the deck (if available)
+  2. Choose 1 card from your hand to play
+  3. Add the card's value to your score
+- **First player to reach 100 points wins!**
 
-- **React 18** with TypeScript
-- **Vite** - Fast build tool and dev server
-- **Material-UI (MUI)** - React component library
-- **Redux Toolkit** - State management
-- **React Router** - Client-side routing
-- **Emotion** - CSS-in-JS styling
-
-## 📁 Project Structure
-
-```
-src/
-├── components/          # React components
-│   └── layout/         # Layout components
-├── pages/              # Page components
-│   ├── HomePage.tsx    # Landing page
-│   ├── CounterPage.tsx # Counter demo
-│   └── TodoPage.tsx    # Todo list demo
-├── store/              # Redux store
-│   ├── store.ts        # Store configuration
-│   ├── counterSlice.ts # Counter state
-│   └── todoSlice.ts    # Todo state
-├── hooks/              # Custom React hooks
-├── types/              # TypeScript definitions
-├── App.tsx             # Main App component
-└── main.tsx            # Entry point
+### How to Run
+```bash
+python battler.py
 ```
 
-## ✨ Features
+### Gameplay
+1. The game will show you your current hand with numbered options
+2. Enter the number of the card you want to play
+3. Watch as the computer makes its move
+4. Keep track of scores as you race to 100 points
+5. The game will ask if you want to play again when finished
 
-### 🏠 Home Page
-- Technology showcase with interactive chips
-- Project overview and feature descriptions
+### Strategy Tips
+- Higher value cards give more points but use up your good cards faster
+- The computer plays more aggressively when it's close to winning
+- Manage your hand wisely - you might run out of cards before reaching 100!
 
-### 🔢 Counter Demo
-- Redux state management with increment/decrement
-- Custom amount input and reset functionality
-- Modern MUI button groups
+## Features
+- Simple text-based interface
+- Smart computer AI that adapts its strategy
+- Score tracking and game state display
+- Replay option
+- Input validation and error handling
 
-### ✅ Todo List Demo
-- Full CRUD operations (Create, Read, Update, Delete)
-- Toggle completion status
-- Bulk actions (clear completed)
-- Real-time counters for active/completed items
-
-### 📱 Responsive Design
-- **Desktop** - Persistent sidebar navigation
-- **Tablet** - Collapsible sidebar
-- **Mobile** - Hamburger menu with touch-friendly interactions
-
-## 🏃 Getting Started
-
-1. **Clone and install dependencies:**
-   ```bash
-   git clone https://github.com/taco429/kitbash.git
-   cd kitbash
-   npm install
-   ```
-
-2. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-
-3. **Open your browser to** `http://localhost:5173`
-
-## 📜 Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production  
-- `npm run preview` - Preview production build
-- `npm run lint` - Run TypeScript type checking
-
-## 🧭 Routes
-
-- **Home** (`/`) - Welcome page and project overview
-- **Counter** (`/counter`) - Redux counter implementation
-- **Todos** (`/todos`) - Todo list with CRUD operations
-
-## 🔧 Development Features
-
-- **Hot Module Replacement** for fast development
-- **TypeScript strict mode** for type safety
-- **Redux DevTools** compatible
-- **Material-UI theming** for consistent styling
-- **Route-based code splitting** for performance
-
----
-
-Built with modern React patterns and TypeScript for scalability and maintainability.
+Enjoy playing Battler! 🎮
