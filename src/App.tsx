@@ -14,6 +14,7 @@ import { CardGamesPage } from './pages/CardGamesPage'
 import { CardGameDemoPage } from './pages/CardGameDemoPage'
 import { WarGamePage } from './pages/WarGamePage'
 import { DeckVisualDemoPage } from './pages/DeckVisualDemoPage'
+import { BattlerPage } from './pages/BattlerPage'
 
 const theme = createTheme({
   palette: {
@@ -46,6 +47,7 @@ function App() {
             <Route path="/card-games/demo" element={<CardGameDemoPage />} />
             <Route path="/card-games/war" element={<WarGamePage />} />
             <Route path="/card-games/deck-demo" element={<DeckVisualDemoPage />} />
+            <Route path="/card-games/battler" element={<BattlerPage />} />
           </Routes>
         </Layout>
       </Router>

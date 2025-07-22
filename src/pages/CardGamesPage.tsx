@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { 
   Casino, 
   Style, 
-  LocalFireDepartment, 
-  Bolt,
-  Diamond,
-  Favorite
+  LocalFireDepartment
 } from '@mui/icons-material'
 
 interface CardGame {
@@ -28,46 +25,6 @@ const cardGames: CardGame[] = [
     isComingSoon: false
   },
   {
-    id: 'poker',
-    name: 'Texas Hold\'em Poker',
-    description: 'Classic poker with community cards and betting rounds',
-    icon: <Casino />,
-    path: '/card-games/poker',
-    isComingSoon: true
-  },
-  {
-    id: 'blackjack',
-    name: 'Blackjack',
-    description: 'Beat the dealer by getting as close to 21 as possible',
-    icon: <LocalFireDepartment />,
-    path: '/card-games/blackjack',
-    isComingSoon: true
-  },
-  {
-    id: 'solitaire',
-    name: 'Klondike Solitaire',
-    description: 'Classic single-player card game',
-    icon: <Diamond />,
-    path: '/card-games/solitaire',
-    isComingSoon: true
-  },
-  {
-    id: 'hearts',
-    name: 'Hearts',
-    description: 'Trick-taking game where you avoid penalty cards',
-    icon: <Favorite />,
-    path: '/card-games/hearts',
-    isComingSoon: true
-  },
-  {
-    id: 'uno',
-    name: 'UNO',
-    description: 'Match colors and numbers to be the first to empty your hand',
-    icon: <Bolt />,
-    path: '/card-games/uno',
-    isComingSoon: true
-  },
-  {
     id: 'war',
     name: 'War',
     description: 'Battle it out in the classic card game! Higher card wins, ties trigger WAR!',
@@ -81,6 +38,14 @@ const cardGames: CardGame[] = [
     description: 'Interactive showcase of the reusable DeckVisual component for card games',
     icon: <Style />,
     path: '/card-games/deck-demo',
+    isComingSoon: false
+  },
+  {
+    id: 'battler',
+    name: 'Battler',
+    description: 'Race to 100 points in this strategic card game! Choose your cards wisely and outplay the AI.',
+    icon: <LocalFireDepartment />,
+    path: '/card-games/battler',
     isComingSoon: false
   }
 ]
@@ -166,8 +131,8 @@ export const CardGamesPage = () => {
 
       <Box sx={{ mt: 6, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          More card games will be added soon! Each game will feature intuitive gameplay,
-          multiple difficulty levels, and modern UI design.
+          Enjoy these fully playable card games! Each features intuitive gameplay,
+          strategic depth, and modern UI design.
         </Typography>
       </Box>
     </Container>
