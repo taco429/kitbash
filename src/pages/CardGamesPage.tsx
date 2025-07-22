@@ -1,4 +1,4 @@
-import { Box, Typography, Grid, Card, CardContent, CardActions, Button, Container } from '@mui/material'
+import { Box, Typography, Grid, Card, CardContent, CardActions, Button, Container, useTheme, useMediaQuery } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { 
   Casino, 
@@ -87,6 +87,8 @@ const cardGames: CardGame[] = [
 
 export const CardGamesPage = () => {
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const handleGameClick = (game: CardGame) => {
     if (game.isComingSoon) {
@@ -133,9 +135,11 @@ export const CardGamesPage = () => {
                     {game.name}
                   </Typography>
                 </Box>
-                <Typography variant="body2" color="text.secondary">
-                  {game.description}
-                </Typography>
+                {!isMobile && (
+                  <Typography variant="body2" color="text.secondary">
+                    {game.description}
+                  </Typography>
+                )}
                 {game.isComingSoon && (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="caption" color="warning.main" fontWeight="bold">

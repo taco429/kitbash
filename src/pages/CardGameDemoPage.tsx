@@ -13,7 +13,9 @@ import {
   FormControl,
   InputLabel,
   Alert,
-  Chip
+  Chip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import { ArrowBack, Shuffle, RestartAlt } from '@mui/icons-material'
@@ -52,6 +54,8 @@ const initialState: GameState = {
 export const CardGameDemoPage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(initialState)
   const navigate = useNavigate()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const handleStartGame = useCallback(() => {
     const newDeck = shuffleCards(createStandardDeck())
@@ -169,10 +173,18 @@ export const CardGameDemoPage: React.FC = () => {
   const stats = getGameStats()
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container 
+      maxWidth="xl" 
+      sx={{ 
+        py: isMobile ? 0 : 4,
+        px: isMobile ? 0 : undefined,
+        height: isMobile ? '100vh' : 'auto',
+        overflow: isMobile ? 'hidden' : 'auto'
+      }}
+    >
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ mb: isMobile ? 1 : 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: isMobile ? 1 : 2 }}>
           <Button
             startIcon={<ArrowBack />}
             onClick={() => navigate('/card-games')}
@@ -184,9 +196,11 @@ export const CardGameDemoPage: React.FC = () => {
             Card Game Demo
           </Typography>
         </Box>
-        <Typography variant="h6" color="text.secondary">
-          Interactive demonstration of reusable card game components
-        </Typography>
+        {!isMobile && (
+          <Typography variant="h6" color="text.secondary">
+            Interactive demonstration of reusable card game components
+          </Typography>
+        )}
       </Box>
 
       {/* Game Controls */}

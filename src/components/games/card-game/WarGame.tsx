@@ -26,6 +26,11 @@ const GameArea = styled(Box)(({ theme }) => ({
   gap: theme.spacing(3),
   padding: theme.spacing(2),
   minHeight: '600px',
+  [theme.breakpoints.down('md')]: {
+    minHeight: 'calc(100vh - 100px)',
+    gap: theme.spacing(2),
+    padding: theme.spacing(1),
+  },
   '@keyframes pulse': {
     '0%': {
       opacity: 1,
@@ -53,6 +58,11 @@ const BattleArea = styled(Box)(({ theme }) => ({
   borderRadius: theme.spacing(2),
   backgroundColor: 'white',
   minHeight: '150px',
+  [theme.breakpoints.down('md')]: {
+    gap: theme.spacing(2),
+    padding: theme.spacing(2),
+    minHeight: '120px',
+  },
 }))
 
 const getCardRankValue = (rank: CardData['rank']): number => {
